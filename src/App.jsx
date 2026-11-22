@@ -12,6 +12,35 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 )
 
+
+function getDisplayImageUrl(rawUrl) {
+  if (!rawUrl) return ''
+  try {
+    const url = new URL(rawUrl.trim())
+    if (!['http:', 'https:'].includes(url.protocol)) return ''
+    const host = url.hostname.toLowerCase()
+
+    // Convert common share links into image-friendly URLs.
+    if (host === 'drive.google.com' || host === 'docs.google.com') {
+      const match = url.pathname.match(/\/file\/d\/([^/]+)/) || url.searchParams.get('id')?.match(/^(.+)$/)
+      const fileId = Array.isArray(match) ? match[1] : match
+      if (fileId) return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`
+    }
+    if (host === 'dropbox.com' || host.endsWith('.dropbox.com')) {
+      url.searchParams.set('raw', '1')
+      return url.toString()
+    }
+    if (host === 'photos.app.goo.gl' || host === 'photos.google.com') {
+      return url.toString()
+    }
+
+    // Proxy public image URLs so common hosts with restrictive hotlink rules can display.
+    return `https://images.weserv.nl/?url=${encodeURIComponent(url.toString())}`
+  } catch {
+    return ''
+  }
+}
+
 function getDeviceKey() {
   let key = localStorage.getItem('talentvote_device')
   if (!key) {
@@ -318,7 +347,7 @@ export default function App() {
 
             {participants.map((p, index) => (
               <div className="participant" key={p.id}>
-                {p.image_url ? <img src={p.image_url} alt={p.name} /> :
+                {p.image_url ? <img src={getDisplayImageUrl(p.image_url)} alt={p.name} /> :
                   <div className="avatar">{p.name.charAt(0).toUpperCase()}</div>}
                 <div className="person"><strong>{p.name}</strong><small>CONTESTANT #{index + 1}</small></div>
                 <button className="primary vote-button"
@@ -395,7 +424,7 @@ export default function App() {
                     <div className="admin-participants">
                       {participants.map((p, i) => (
                         <div className="admin-person" key={p.id}>
-                          {p.image_url ? <img src={p.image_url} alt="" /> : <div className="avatar">{p.name.charAt(0).toUpperCase()}</div>}
+                          {p.image_url ? <img src={getDisplayImageUrl(p.image_url)} alt="" /> : <div className="avatar">{p.name.charAt(0).toUpperCase()}</div>}
                           <div><strong>#{i + 1} {p.name}</strong><small>{p.image_url ? 'Image added' : 'No image'}</small></div>
                         </div>
                       ))}
@@ -409,12 +438,12 @@ export default function App() {
                         onChange={e => { setImageUrl(e.target.value); setImagePreviewError(false) }} />
                       {imageUrl.trim() && !imagePreviewError && (
                         <div className="image-preview">
-                          <img src={imageUrl.trim()} alt="Participant image preview"
+                          <img src={getDisplayImageUrl(imageUrl)} alt="Participant image preview"
                             onError={() => setImagePreviewError(true)} />
                           <small>IMAGE PREVIEW — this is how voters will see the photo</small>
                         </div>
                       )}
-                      {imagePreviewError && <p className="image-error">Image URL could not be loaded. Check that it is a direct, publicly accessible image link.</p>}
+                      {imagePreviewError && <p className="image-error">Image could not be loaded. Make sure the link is public and points to an image.</p>}
                       <button className="primary form-button"><Plus size={14} /> ADD PARTICIPANT</button>
                     </form>
                   </>
