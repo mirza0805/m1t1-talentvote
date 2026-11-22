@@ -168,6 +168,7 @@ export default function App() {
   async function addParticipant(e) {
     e.preventDefault()
     if (!newParticipant.trim() || !selected) return
+    if (imageUrl.trim() && imagePreviewError) return notify('Please use a valid, publicly accessible image URL before adding this participant.')
     const { error } = await supabase.from('participants').insert({
       competition_id: selected,
       name: newParticipant.trim(),
