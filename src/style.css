@@ -56,3 +56,5 @@ footer{text-align:center;color:#8582b3;padding:30px 15px;font-size:10px;letter-s
 .image-error{margin-top:9px;color:#ff9bb5;font-size:11px}
 .organizer-link{display:block;margin:12px auto 0;background:transparent;color:#a9a4d6;font-size:9px;letter-spacing:1.4px;text-decoration:underline}
 @media(max-width:520px){.inline-edit{flex-direction:column;align-items:stretch}.inline-edit button{width:100%}}
+
+.edit-next-to-name{margin-top:10px;display:inline-flex;align-items:center;gap:6px;background:#292052;border:1px solid #7966bb;color:#f4eaff;border-radius:8px;padding:8px 11px;font-size:10px;font-weight:800}
