@@ -120,9 +120,10 @@ export default function App() {
 
   useEffect(() => {
     setEditedCompetitionName(competition?.name || '')
-    setVoteReceipt(false)
+    const alreadyVoted = selected && localStorage.getItem('talentvote_voted_' + selected)
+    setVoteReceipt(!!alreadyVoted)
     setVoteAgainStep(0)
-  }, [selected])
+  }, [selected, competition?.name])
 
   async function login(e) {
     e.preventDefault()
@@ -272,6 +273,11 @@ export default function App() {
               onChange={e => setSelected(e.target.value)}>
               {competitions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
+            {isAdmin && competition && (
+              <button className="edit-next-to-name" onClick={() => { setTab('admin'); setShowAdminLogin(true) }}>
+                <Pencil size={13} /> EDIT COMPETITION
+              </button>
+            )}
           </section>
         )}
 
