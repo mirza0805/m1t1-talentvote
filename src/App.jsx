@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import {
   Trophy, Users, Vote, Plus, LogOut, Lock, BarChart3,
-  RefreshCw, CheckCircle, XCircle, Trash2, Star
+  RefreshCw, CheckCircle, XCircle, Trash2, Star, Pencil, Image as ImageIcon
 } from 'lucide-react'
 import './style.css'
 
@@ -32,6 +32,9 @@ export default function App() {
   const [participants, setParticipants] = useState([])
   const [totals, setTotals] = useState({})
   const [newCompetition, setNewCompetition] = useState('')
+  const [editedCompetitionName, setEditedCompetitionName] = useState('')
+  const [showAdminLogin, setShowAdminLogin] = useState(false)
+  const [imagePreviewError, setImagePreviewError] = useState(false)
   const [newParticipant, setNewParticipant] = useState('')
   const [imageUrl, setImageUrl] = useState('')
   const [loading, setLoading] = useState(false)
@@ -116,6 +119,7 @@ export default function App() {
   }, [loadData, loadCompetitions])
 
   useEffect(() => {
+    setEditedCompetitionName(competition?.name || '')
     setVoteReceipt(false)
     setVoteAgainStep(0)
   }, [selected])
@@ -148,6 +152,16 @@ export default function App() {
     await loadCompetitions()
     setSelected(data.id)
     notify('Competition created')
+  }
+
+  async function renameCompetition(e) {
+    e.preventDefault()
+    if (!selected || !editedCompetitionName.trim()) return
+    const { error } = await supabase.from('competitions')
+      .update({ name: editedCompetitionName.trim() }).eq('id', selected)
+    if (error) return notify('Could not update competition: ' + error.message)
+    await loadCompetitions()
+    notify('Competition name updated')
   }
 
   async function addParticipant(e) {
@@ -193,6 +207,11 @@ export default function App() {
     }
     const confirmed = window.confirm('Confirm your vote? Once submitted, your vote cannot be cancelled or changed.')
     if (!confirmed) return
+    const localVoteKey = 'talentvote_voted_' + selected
+    if (localStorage.getItem(localVoteKey)) {
+      setVoteReceipt(true)
+      return notify('This device has already voted in this competition.')
+    }
     setLoading(true)
     const { data, error } = await supabase.rpc('cast_vote', {
       p_competition_id: selected,
@@ -207,6 +226,7 @@ export default function App() {
       setVoteAgainStep(0)
       return notify(serverMessage)
     }
+    localStorage.setItem(localVoteKey, '1')
     setVoteReceipt(true)
     setVoteAgainStep(0)
     await loadData()
@@ -224,7 +244,7 @@ export default function App() {
     <div className="app">
       <header>
         <div className="brand">
-          <div className="logo"><Star size={24} fill="currentColor" /></div>
+          <div className="logo"><img src="/talentvote-logo.png" alt="M1T1 TalentVote logo" /></div>
           <div><h1>M1T1 <span>TalentVote</span></h1><p>THE STAGE IS YOURS</p></div>
         </div>
         <span className="live">● ONLINE</span>
@@ -259,7 +279,6 @@ export default function App() {
           <button className={tab === 'home' ? 'active' : ''} onClick={() => setTab('home')}>Overview</button>
           <button className={tab === 'vote' ? 'active' : ''} onClick={() => setTab('vote')}>Vote</button>
           <button className={tab === 'results' ? 'active' : ''} onClick={() => setTab('results')}>Results</button>
-          <button className={tab === 'admin' ? 'active' : ''} onClick={() => setTab('admin')}>Admin</button>
         </nav>
 
         {tab === 'home' && (
@@ -320,7 +339,7 @@ export default function App() {
         {tab === 'admin' && (
           <section className="panel">
             <h2><Lock /> Admin Panel</h2>
-            {!user && (
+            {!user && showAdminLogin && (
               <form onSubmit={login}>
                 <label>ADMIN EMAIL</label>
                 <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@email.com" />
@@ -329,11 +348,23 @@ export default function App() {
                 <button className="primary form-button" disabled={loading}>LOGIN</button>
               </form>
             )}
+            {!user && !showAdminLogin && <p>Organizer access only.</p>}
             {user && !isAdmin && <div><p>This account has not been granted Admin access.</p><button className="primary" onClick={logout}>LOGOUT</button></div>}
             {user && isAdmin && (
               <>
                 <p className="admin-email">Logged in as: {user.email}</p>
                 <button className="secondary" onClick={logout}><LogOut size={14} /> LOGOUT</button>
+
+                {competition && (
+                  <div className="edit-competition">
+                    <div className="edit-title"><Pencil size={16} /><strong>EDIT SELECTED COMPETITION</strong></div>
+                    <form onSubmit={renameCompetition} className="inline-edit">
+                      <input aria-label="Competition name" value={editedCompetitionName}
+                        onChange={e => setEditedCompetitionName(e.target.value)} required />
+                      <button className="primary" type="submit">SAVE NAME</button>
+                    </form>
+                  </div>
+                )}
 
                 <h3>Create Competition</h3>
                 <form onSubmit={createCompetition}>
@@ -368,7 +399,15 @@ export default function App() {
                       <input placeholder="Participant name" value={newParticipant}
                         onChange={e => setNewParticipant(e.target.value)} required />
                       <input type="url" placeholder="Image URL (optional)" value={imageUrl}
-                        onChange={e => setImageUrl(e.target.value)} />
+                        onChange={e => { setImageUrl(e.target.value); setImagePreviewError(false) }} />
+                      {imageUrl.trim() && !imagePreviewError && (
+                        <div className="image-preview">
+                          <img src={imageUrl.trim()} alt="Participant image preview"
+                            onError={() => setImagePreviewError(true)} />
+                          <small>IMAGE PREVIEW — this is how voters will see the photo</small>
+                        </div>
+                      )}
+                      {imagePreviewError && <p className="image-error">Image URL could not be loaded. Check that it is a direct, publicly accessible image link.</p>}
                       <button className="primary form-button"><Plus size={14} /> ADD PARTICIPANT</button>
                     </form>
                   </>
@@ -378,7 +417,9 @@ export default function App() {
           </section>
         )}
       </main>
-      <footer>M1T1 TALENTVOTE <span>•</span> THE STAGE IS YOURS</footer>
+      <footer>M1T1 TALENTVOTE <span>•</span> THE STAGE IS YOURS
+        <button className="organizer-link" onClick={() => { setTab('admin'); setShowAdminLogin(true) }}>ORGANIZER LOGIN</button>
+      </footer>
     </div>
   )
 }
