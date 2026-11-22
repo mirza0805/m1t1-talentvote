@@ -56,6 +56,10 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [voterEmail, setVoterEmail] = useState('')
+  const [voterOtp, setVoterOtp] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
+  const [hasVoted, setHasVoted] = useState(false)
   const [competitions, setCompetitions] = useState([])
   const [selected, setSelected] = useState('')
   const [participants, setParticipants] = useState([])
@@ -149,10 +153,31 @@ export default function App() {
 
   useEffect(() => {
     setEditedCompetitionName(competition?.name || '')
-    const alreadyVoted = selected && localStorage.getItem('talentvote_voted_' + selected)
-    setVoteReceipt(!!alreadyVoted)
     setVoteAgainStep(0)
   }, [selected, competition?.name])
+
+  useEffect(() => {
+    let active = true
+    async function checkVote() {
+      if (!selected || !user) {
+        if (active) {
+          setHasVoted(false)
+          setVoteReceipt(false)
+        }
+        return
+      }
+      const { data, error } = await supabase.rpc('has_voted', { p_competition_id: selected })
+      if (!active) return
+      if (error) {
+        notify('Could not check your voting status: ' + error.message)
+        return
+      }
+      setHasVoted(!!data)
+      setVoteReceipt(!!data)
+    }
+    checkVote()
+    return () => { active = false }
+  }, [selected, user])
 
   async function login(e) {
     e.preventDefault()
@@ -164,10 +189,41 @@ export default function App() {
     notify('Admin login successful')
   }
 
+  async function sendVoterOtp(e) {
+    e.preventDefault()
+    if (!voterEmail.trim()) return
+    setLoading(true)
+    const { error } = await supabase.auth.signInWithOtp({
+      email: voterEmail.trim(),
+      options: { shouldCreateUser: true }
+    })
+    setLoading(false)
+    if (error) return notify(error.message)
+    setOtpSent(true)
+    notify('Verification code sent. Check your email.')
+  }
+
+  async function verifyVoterOtp(e) {
+    e.preventDefault()
+    setLoading(true)
+    const { error } = await supabase.auth.verifyOtp({
+      email: voterEmail.trim(),
+      token: voterOtp.trim(),
+      type: 'email'
+    })
+    setLoading(false)
+    if (error) return notify(error.message)
+    setVoterOtp('')
+    setOtpSent(false)
+    notify('Email verified. You can now vote.')
+  }
+
   async function logout() {
     await supabase.auth.signOut()
     setUser(null)
     setIsAdmin(false)
+    setHasVoted(false)
+    setVoteReceipt(false)
     setTab('home')
     notify('You have logged out')
   }
@@ -233,16 +289,12 @@ export default function App() {
   }
 
   async function castVote(participantId) {
+    if (!user) return notify('Please sign in with your email before voting.')
     if (!selected || competition?.status !== 'open') {
       return notify('Voting is not open right now.')
     }
     const confirmed = window.confirm('Confirm your vote? Once submitted, your vote cannot be cancelled or changed.')
     if (!confirmed) return
-    const localVoteKey = 'talentvote_voted_' + selected
-    if (localStorage.getItem(localVoteKey)) {
-      setVoteReceipt(true)
-      return notify('This device has already voted in this competition.')
-    }
     setLoading(true)
     const { data, error } = await supabase.rpc('cast_vote', {
       p_competition_id: selected,
@@ -257,7 +309,7 @@ export default function App() {
       setVoteAgainStep(0)
       return notify(serverMessage)
     }
-    localStorage.setItem(localVoteKey, '1')
+    setHasVoted(true)
     setVoteReceipt(true)
     setVoteAgainStep(0)
     await loadData()
@@ -332,6 +384,34 @@ export default function App() {
             {!competition && <p>Create a competition first.</p>}
             {competition && competition.status !== 'open' && <p className="closed-note">Voting is currently not open.</p>}
 
+            {!user && (
+              <div className="email-login">
+                <h3>LOGIN TO VOTE</h3>
+                {!otpSent ? (
+                  <form onSubmit={sendVoterOtp}>
+                    <p>Enter your email address. We will send a one-time verification code.</p>
+                    <input type="email" required value={voterEmail}
+                      onChange={e => setVoterEmail(e.target.value)} placeholder="Your email address" />
+                    <button className="primary form-button" disabled={loading}>SEND VERIFICATION CODE</button>
+                  </form>
+                ) : (
+                  <form onSubmit={verifyVoterOtp}>
+                    <p>Enter the verification code sent to <strong>{voterEmail}</strong>.</p>
+                    <input inputMode="numeric" autoComplete="one-time-code" required value={voterOtp}
+                      onChange={e => setVoterOtp(e.target.value)} placeholder="6-digit code" />
+                    <button className="primary form-button" disabled={loading}>VERIFY EMAIL</button>
+                    <button type="button" className="secondary form-button" onClick={() => setOtpSent(false)}>CHANGE EMAIL</button>
+                  </form>
+                )}
+              </div>
+            )}
+            {user && !isAdmin && (
+              <div className="voter-session">
+                <p>Signed in as <strong>{user.email}</strong></p>
+                <button className="secondary form-button" onClick={logout}>LOG OUT</button>
+              </div>
+            )}
+
             {voteReceipt && (
               <div className="thankyou">
                 <div className="success-icon"><CheckCircle size={27} /></div>
@@ -351,7 +431,7 @@ export default function App() {
                   <div className="avatar">{p.name.charAt(0).toUpperCase()}</div>}
                 <div className="person"><strong>{p.name}</strong><small>CONTESTANT #{index + 1}</small></div>
                 <button className="primary vote-button"
-                  disabled={loading || competition?.status !== 'open' || voteReceipt}
+                  disabled={loading || competition?.status !== 'open' || !user || hasVoted}
                   onClick={() => castVote(p.id)}>VOTE</button>
               </div>
             ))}
