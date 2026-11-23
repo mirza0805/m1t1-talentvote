@@ -218,7 +218,7 @@ export default function App() {
 
   async function verifyVoterOtp(e) {
     e.preventDefault()
-    if (!/^\\d{6}$/.test(voterOtp.trim())) return notify('Please enter the 6-digit verification code.')
+    if (!/^\d{6}$/.test(voterOtp.trim())) return notify('Please enter the 6-digit verification code.')
     setLoading(true)
     setMessage('')
     try {
@@ -423,7 +423,7 @@ export default function App() {
                   <form onSubmit={verifyVoterOtp}>
                     <p>Enter the verification code sent to <strong>{voterEmail}</strong>.</p>
                     <input inputMode="numeric" autoComplete="one-time-code" type="text" maxLength={6} pattern="[0-9]{6}" required value={voterOtp}
-                      onChange={e => setVoterOtp(e.target.value.replace(/\\D/g, '').slice(0, 6))} placeholder="6-digit code" />
+                      onChange={e => setVoterOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="6-digit code" />
                     <button className="primary form-button" disabled={loading}>{loading ? 'VERIFYING...' : 'VERIFY EMAIL'}</button>
                     <button type="button" className="secondary form-button" disabled={loading} onClick={() => {
                       localStorage.removeItem('talentvote_pending_email')
