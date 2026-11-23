@@ -352,7 +352,8 @@ export default function App() {
     setHasVoted(true)
     setVoteReceipt(true)
     setVoteAgainStep(0)
-    await loadData()
+    // Avoid an extra participants + totals read for every successful vote.
+    // Results are refreshed when the Results tab is opened or its timer runs.
   }
 
   function handleVoteAgain() {
@@ -429,7 +430,7 @@ export default function App() {
                 <h3>LOGIN TO VOTE</h3>
                 {!otpSent ? (
                   <form onSubmit={sendVoterOtp}>
-                    <p>Enter your email address. We will send a one-time verification code.</p>
+                    <p>Enter your email address. We will send a one-time verification code. For the fastest voting experience, verify your email before the event and stay signed in.</p>
                     <input type="email" required value={voterEmail}
                       onChange={e => setVoterEmail(e.target.value)} placeholder="Your email address" />
                     <button className="primary form-button" disabled={loading}>{loading ? 'SENDING...' : 'SEND VERIFICATION CODE'}</button>
@@ -486,7 +487,7 @@ export default function App() {
         {tab === 'results' && (
           <section className="panel">
             <h2><Trophy /> Live Results</h2>
-            <p>Results refresh automatically every 5 seconds.</p>
+            <p>Results refresh automatically every 15 seconds while this tab is open.</p>
             {[...participants].sort((a, b) => (totals[b.id] || 0) - (totals[a.id] || 0))
               .map((p, index) => (
                 <div className="result" key={p.id}>
