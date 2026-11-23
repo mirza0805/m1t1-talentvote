@@ -194,14 +194,16 @@ export default function App() {
     return () => { active = false }
   }, [selected, user])
 
-  async function login(e) {
-    e.preventDefault()
+  async function signInWithGoogle() {
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
-    if (error) return notify(error.message)
-    setPassword('')
-    notify('Admin login successful')
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    })
+    if (error) {
+      setLoading(false)
+      return notify('Google sign-in is not available yet: ' + error.message)
+    }
   }
 
   async function sendVoterOtp(e) {
@@ -382,7 +384,7 @@ export default function App() {
           <div className="hero-rule" />
           <div className="stats">
             <div><Users /><strong>{participants.length}</strong><small>Participants</small></div>
-            <div><Vote /><strong>{totalVotes}</strong><small>Total votes</small></div>
+            <div><Vote /><strong>{isAdmin || competition?.status === 'closed' ? totalVotes : '—'}</strong><small>{isAdmin || competition?.status === 'closed' ? 'Total votes' : 'Votes hidden'}</small></div>
             <div><Trophy /><strong>{competition?.status === 'open' ? 'LIVE' : '—'}</strong><small>Voting status</small></div>
           </div>
         </section>
@@ -407,7 +409,9 @@ export default function App() {
         <nav>
           <button className={tab === 'home' ? 'active' : ''} onClick={() => setTab('home')}>Overview</button>
           <button className={tab === 'vote' ? 'active' : ''} onClick={() => setTab('vote')}>Vote</button>
-          <button className={tab === 'results' ? 'active' : ''} onClick={() => setTab('results')}>Results</button>
+          {(isAdmin || competition?.status === 'closed') && (
+            <button className={tab === 'results' ? 'active' : ''} onClick={() => setTab('results')}>Results</button>
+          )}
         </nav>
 
         {tab === 'home' && (
@@ -427,28 +431,11 @@ export default function App() {
 
             {!user && (
               <div className="email-login">
-                <h3>LOGIN TO VOTE</h3>
-                {!otpSent ? (
-                  <form onSubmit={sendVoterOtp}>
-                    <p>Enter your email address. We will send a one-time verification code. For the fastest voting experience, verify your email before the event and stay signed in.</p>
-                    <input type="email" required value={voterEmail}
-                      onChange={e => setVoterEmail(e.target.value)} placeholder="Your email address" />
-                    <button className="primary form-button" disabled={loading}>{loading ? 'SENDING...' : 'SEND VERIFICATION CODE'}</button>
-                  </form>
-                ) : (
-                  <form onSubmit={verifyVoterOtp}>
-                    <p>Enter the verification code sent to <strong>{voterEmail}</strong>.</p>
-                    <input inputMode="numeric" autoComplete="one-time-code" type="text" maxLength={6} pattern="[0-9]{6}" required value={voterOtp}
-                      onChange={e => setVoterOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="6-digit code" />
-                    <button className="primary form-button" disabled={loading}>{loading ? 'VERIFYING...' : 'VERIFY EMAIL'}</button>
-                    <button type="button" className="secondary form-button" disabled={loading} onClick={() => {
-                      localStorage.removeItem('talentvote_pending_email')
-                      localStorage.removeItem('talentvote_otp_sent')
-                      setVoterOtp('')
-                      setOtpSent(false)
-                    }}>CHANGE EMAIL</button>
-                  </form>
-                )}
+                <h3>LOGIN WITH GOOGLE</h3>
+                <p>Use your Google account to verify your identity and vote. Please sign in before voting starts for a smoother event.</p>
+                <button className="primary form-button" disabled={loading} onClick={signInWithGoogle}>
+                  {loading ? 'CONNECTING...' : 'CONTINUE WITH GOOGLE'}
+                </button>
               </div>
             )}
             {user && !isAdmin && (
@@ -484,10 +471,10 @@ export default function App() {
           </section>
         )}
 
-        {tab === 'results' && (
+        {tab === 'results' && (isAdmin || competition?.status === 'closed') && (
           <section className="panel">
-            <h2><Trophy /> Live Results</h2>
-            <p>Results refresh automatically every 15 seconds while this tab is open.</p>
+            <h2><Trophy /> Final Results</h2>
+            <p>Official results are available because voting has closed.</p>
             {[...participants].sort((a, b) => (totals[b.id] || 0) - (totals[a.id] || 0))
               .map((p, index) => (
                 <div className="result" key={p.id}>
@@ -502,13 +489,12 @@ export default function App() {
           <section className="panel">
             <h2><Lock /> Admin Panel</h2>
             {!user && showAdminLogin && (
-              <form onSubmit={login}>
-                <label>ADMIN EMAIL</label>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@email.com" />
-                <label>PASSWORD</label>
-                <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Admin password" />
-                <button className="primary form-button" disabled={loading}>LOGIN</button>
-              </form>
+              <div className="email-login">
+                <p>Organizer access is restricted to the approved Google admin account.</p>
+                <button className="primary form-button" disabled={loading} onClick={signInWithGoogle}>
+                  {loading ? 'CONNECTING...' : 'SIGN IN WITH GOOGLE'}
+                </button>
+              </div>
             )}
             {!user && !showAdminLogin && <p>Organizer access only.</p>}
             {user && !isAdmin && <div><p>This account has not been granted Admin access.</p><button className="primary" onClick={logout}>LOGOUT</button></div>}
