@@ -56,9 +56,9 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [voterEmail, setVoterEmail] = useState('')
+  const [voterEmail, setVoterEmail] = useState(() => localStorage.getItem('talentvote_pending_email') || '')
   const [voterOtp, setVoterOtp] = useState('')
-  const [otpSent, setOtpSent] = useState(false)
+  const [otpSent, setOtpSent] = useState(() => localStorage.getItem('talentvote_otp_sent') === 'true')
   const [hasVoted, setHasVoted] = useState(false)
   const [competitions, setCompetitions] = useState([])
   const [selected, setSelected] = useState('')
@@ -191,31 +191,56 @@ export default function App() {
 
   async function sendVoterOtp(e) {
     e.preventDefault()
-    if (!voterEmail.trim()) return
+    const normalizedEmail = voterEmail.trim().toLowerCase()
+    if (!normalizedEmail) return notify('Please enter your email address.')
     setLoading(true)
-    const { error } = await supabase.auth.signInWithOtp({
-      email: voterEmail.trim(),
-      options: { shouldCreateUser: true }
-    })
-    setLoading(false)
-    if (error) return notify(error.message)
-    setOtpSent(true)
-    notify('Verification code sent. Check your email.')
+    setMessage('')
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: normalizedEmail,
+        options: { shouldCreateUser: true }
+      })
+      if (error) {
+        notify('Could not send verification code: ' + error.message)
+        return
+      }
+      localStorage.setItem('talentvote_pending_email', normalizedEmail)
+      localStorage.setItem('talentvote_otp_sent', 'true')
+      setVoterEmail(normalizedEmail)
+      setOtpSent(true)
+      notify('Verification code sent. Check your Inbox and Spam folder.')
+    } catch (error) {
+      notify('Could not send verification code. Please check your connection and try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function verifyVoterOtp(e) {
     e.preventDefault()
+    if (!/^\\d{6}$/.test(voterOtp.trim())) return notify('Please enter the 6-digit verification code.')
     setLoading(true)
-    const { error } = await supabase.auth.verifyOtp({
-      email: voterEmail.trim(),
-      token: voterOtp.trim(),
-      type: 'email'
-    })
-    setLoading(false)
-    if (error) return notify(error.message)
-    setVoterOtp('')
-    setOtpSent(false)
-    notify('Email verified. You can now vote.')
+    setMessage('')
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: voterEmail.trim().toLowerCase(),
+        token: voterOtp.trim(),
+        type: 'email'
+      })
+      if (error) {
+        notify('Verification failed: ' + error.message)
+        return
+      }
+      localStorage.removeItem('talentvote_pending_email')
+      localStorage.removeItem('talentvote_otp_sent')
+      setVoterOtp('')
+      setOtpSent(false)
+      notify('Email verified. You can now vote.')
+    } catch (error) {
+      notify('Verification failed. Please check your connection and try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function logout() {
@@ -392,15 +417,20 @@ export default function App() {
                     <p>Enter your email address. We will send a one-time verification code.</p>
                     <input type="email" required value={voterEmail}
                       onChange={e => setVoterEmail(e.target.value)} placeholder="Your email address" />
-                    <button className="primary form-button" disabled={loading}>SEND VERIFICATION CODE</button>
+                    <button className="primary form-button" disabled={loading}>{loading ? 'SENDING...' : 'SEND VERIFICATION CODE'}</button>
                   </form>
                 ) : (
                   <form onSubmit={verifyVoterOtp}>
                     <p>Enter the verification code sent to <strong>{voterEmail}</strong>.</p>
-                    <input inputMode="numeric" autoComplete="one-time-code" required value={voterOtp}
-                      onChange={e => setVoterOtp(e.target.value)} placeholder="6-digit code" />
-                    <button className="primary form-button" disabled={loading}>VERIFY EMAIL</button>
-                    <button type="button" className="secondary form-button" onClick={() => setOtpSent(false)}>CHANGE EMAIL</button>
+                    <input inputMode="numeric" autoComplete="one-time-code" type="text" maxLength={6} pattern="[0-9]{6}" required value={voterOtp}
+                      onChange={e => setVoterOtp(e.target.value.replace(/\\D/g, '').slice(0, 6))} placeholder="6-digit code" />
+                    <button className="primary form-button" disabled={loading}>{loading ? 'VERIFYING...' : 'VERIFY EMAIL'}</button>
+                    <button type="button" className="secondary form-button" disabled={loading} onClick={() => {
+                      localStorage.removeItem('talentvote_pending_email')
+                      localStorage.removeItem('talentvote_otp_sent')
+                      setVoterOtp('')
+                      setOtpSent(false)
+                    }}>CHANGE EMAIL</button>
                   </form>
                 )}
               </div>
