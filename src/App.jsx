@@ -144,12 +144,27 @@ export default function App() {
 
   useEffect(() => {
     loadData()
-    const timer = window.setInterval(() => {
-      loadData()
-      loadCompetitions()
-    }, 5000)
-    return () => window.clearInterval(timer)
-  }, [loadData, loadCompetitions])
+
+    // Refresh competition status less frequently for all visitors.
+    // Refresh vote totals only while the Results or Admin tab is visible.
+    const competitionTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') loadCompetitions()
+    }, 30000)
+
+    const dataTimer = window.setInterval(() => {
+      if (
+        document.visibilityState === 'visible' &&
+        (tab === 'results' || (tab === 'admin' && isAdmin))
+      ) {
+        loadData()
+      }
+    }, 15000)
+
+    return () => {
+      window.clearInterval(competitionTimer)
+      window.clearInterval(dataTimer)
+    }
+  }, [loadData, loadCompetitions, tab, isAdmin])
 
   useEffect(() => {
     setEditedCompetitionName(competition?.name || '')
