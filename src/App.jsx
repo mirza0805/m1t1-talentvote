@@ -181,7 +181,10 @@ export default function App() {
         }
         return
       }
-      const { data, error } = await supabase.rpc('has_voted', { p_competition_id: selected })
+      const { data, error } = await supabase.rpc('has_voted', {
+        p_competition_id: selected,
+        p_device_key: getDeviceKey()
+      })
       if (!active) return
       if (error) {
         notify('Could not check your voting status: ' + error.message)
