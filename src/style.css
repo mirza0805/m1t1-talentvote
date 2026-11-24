@@ -110,3 +110,148 @@ footer{text-align:center;color:#8582b3;padding:30px 15px;font-size:10px;letter-s
 .muslim-prompt p{color:#d2d5ef;font-size:13px;line-height:1.6}
 .muslim-prompt-actions{display:flex;gap:12px;margin-top:22px}
 .muslim-prompt-actions button{flex:1;min-height:44px}
+
+
+/* FUTURISTIC NEON STAGE THEME */
+:root{
+  color-scheme:dark;
+  --tv-cyan:#54f4ff;
+  --tv-violet:#9b7bff;
+  --tv-pink:#ff63c8;
+  --tv-gold:#ffd66b;
+  --tv-glass:rgba(18,22,58,.72);
+}
+html{scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(ellipse at 12% 18%,rgba(111,48,210,.34),transparent 38%),
+    radial-gradient(ellipse at 88% 12%,rgba(0,190,255,.22),transparent 34%),
+    radial-gradient(ellipse at 52% 100%,rgba(255,70,180,.13),transparent 42%),
+    #070817;
+  background-attachment:fixed;
+}
+body:before,body:after{
+  content:"";position:fixed;z-index:-1;pointer-events:none;border-radius:50%;
+  filter:blur(65px);opacity:.35;will-change:transform;
+}
+body:before{
+  width:280px;height:280px;left:-100px;top:24%;
+  background:#773cff;animation:stage-orb-one 18s ease-in-out infinite alternate;
+}
+body:after{
+  width:320px;height:320px;right:-130px;bottom:8%;
+  background:#00bde8;animation:stage-orb-two 22s ease-in-out infinite alternate;
+}
+@keyframes stage-orb-one{from{transform:translate3d(0,0,0) scale(.9)}to{transform:translate3d(80px,70px,0) scale(1.2)}}
+@keyframes stage-orb-two{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-90px,-55px,0) scale(1.18)}}
+.app{position:relative;isolation:isolate}
+header{position:relative}
+.logo{border-color:#8e7cff;background:linear-gradient(145deg,#17113f,#082a4c);box-shadow:0 0 0 1px #54f4ff22,0 0 25px #8d68ff66;animation:logo-aura 4s ease-in-out infinite}
+@keyframes logo-aura{50%{box-shadow:0 0 0 1px #54f4ff66,0 0 34px #8d68ff99}}
+.brand h1 span{background:linear-gradient(90deg,#ffe18a,#ff70d2,#65eaff);background-clip:text;-webkit-background-clip:text;color:transparent}
+.live{color:#8dffe1;background:#092c37;border-color:#2ad9c5;box-shadow:0 0 18px #21e6c733;animation:live-pulse 2.2s ease-in-out infinite}
+@keyframes live-pulse{50%{box-shadow:0 0 24px #21e6c766}}
+.hero{
+  overflow:hidden;border:1px solid #8b75ff66;border-radius:26px;
+  background:linear-gradient(125deg,rgba(48,22,105,.88),rgba(13,31,83,.88) 55%,rgba(7,55,86,.84));
+  box-shadow:0 18px 65px #0008,0 0 35px #6d48e522,inset 0 1px #ffffff18;
+  backdrop-filter:blur(16px);
+}
+.hero:before{
+  content:"";position:absolute;inset:-70% -30%;pointer-events:none;
+  background:linear-gradient(110deg,transparent 42%,#ffffff0c 49%,#6af5ff18 51%,transparent 58%);
+  transform:translateX(-55%) rotate(8deg);animation:hero-sheen 9s ease-in-out infinite;
+}
+@keyframes hero-sheen{0%,35%{transform:translateX(-60%) rotate(8deg)}75%,100%{transform:translateX(60%) rotate(8deg)}}
+.hero:after{border-color:#64eaff35;box-shadow:0 0 0 18px #64eaff0d,0 0 0 38px #a56bff0a,0 0 55px #54f4ff22}
+.eyebrow{color:#70f4ff;text-shadow:0 0 15px #54f4ff66}
+.hero h2{background:linear-gradient(90deg,#fff 5%,#c8c1ff 55%,#83f4ff);background-clip:text;-webkit-background-clip:text;color:transparent}
+.hero-rule{background:linear-gradient(90deg,#54f4ff,#9b7bff,#ff63c8,#ffd66b,transparent);box-shadow:0 0 16px #54f4ff55}
+.stats svg{color:#69edff;filter:drop-shadow(0 0 7px #54f4ff88)}
+.stats strong{ text-shadow:0 0 18px #8c7bff44}
+.panel,.toast{
+  background:linear-gradient(145deg,rgba(24,25,66,.82),rgba(10,25,52,.78));
+  border:1px solid #8276d34d;border-radius:20px;
+  box-shadow:0 14px 42px #0005,inset 0 1px #ffffff12;
+  backdrop-filter:blur(14px);
+}
+.panel{transition:border-color .25s ease,box-shadow .25s ease,transform .25s ease}
+.panel:hover{border-color:#70eaff70;box-shadow:0 16px 48px #0006,0 0 24px #54dfff13}
+.panel h2 svg{color:#68efff;filter:drop-shadow(0 0 7px #54f4ff66)}
+.panel h3,.competition-picker label{color:#86f3ff}
+.primary,.vote-again{
+  position:relative;isolation:isolate;overflow:hidden;
+  color:#09152c;
+  background:linear-gradient(110deg,#ffe28a 0%,#ff9cda 48%,#75f1ff 100%);
+  border:1px solid #ffffff70;border-radius:12px;
+  box-shadow:0 5px 18px #6cddff28,0 0 0 1px #8d79ff22;
+  transition:transform .2s ease,box-shadow .2s ease,filter .2s ease;
+}
+.primary:before,.vote-again:before{
+  content:"";position:absolute;z-index:-1;top:-80%;left:-45%;width:35%;height:260%;
+  transform:rotate(25deg);background:#ffffff80;filter:blur(8px);
+  transition:left .55s ease;
+}
+.primary:hover:before,.vote-again:hover:before{left:125%}
+.primary:hover,.vote-again:hover{
+  transform:translateY(-2px);filter:saturate(1.15);
+  box-shadow:0 9px 26px #54dfff45,0 0 22px #a477ff35;
+}
+.primary:active,.vote-again:active{transform:scale(.96)}
+.primary:disabled{filter:grayscale(.45);opacity:.5}
+.secondary,.danger{
+  border-radius:12px;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;
+}
+.secondary{background:linear-gradient(120deg,#29245c,#123d5a);border-color:#6e8bd0;color:#e9faff}
+.secondary:hover{transform:translateY(-2px);border-color:#6cf2ff;box-shadow:0 0 18px #54f4ff28}
+.danger:hover{transform:translateY(-2px);box-shadow:0 0 18px #ff568b30}
+nav{
+  background:rgba(9,13,39,.78);border:1px solid #6b70ba66;
+  border-radius:16px;padding:6px;backdrop-filter:blur(14px);
+  box-shadow:0 10px 30px #0004;
+}
+nav button{border-radius:11px;transition:color .2s ease,background .25s ease,transform .2s ease}
+nav button:not(.active):hover{color:#8ff5ff;background:#ffffff0a}
+nav button.active{
+  background:linear-gradient(110deg,#754dce,#315ac0,#167e9c);
+  color:#fff;box-shadow:0 4px 18px #4d75e966,inset 0 1px #ffffff35;
+}
+select,input{
+  background:rgba(7,13,38,.86);border-color:#6a6bb0;color:#f6f5ff;
+  transition:border-color .2s ease,box-shadow .2s ease;
+}
+select:focus,input:focus{border-color:#64edff;box-shadow:0 0 0 3px #54f4ff20,0 0 18px #54f4ff16}
+.participant{
+  position:relative;overflow:hidden;
+  background:linear-gradient(105deg,rgba(42,30,91,.78),rgba(13,48,79,.78));
+  border-color:#7975c45c;box-shadow:inset 0 1px #ffffff0c;
+}
+.participant:before{
+  content:"";position:absolute;inset:0 auto 0 0;width:3px;
+  background:linear-gradient(#54f4ff,#9b7bff,#ff63c8);opacity:.8;
+}
+.participant:hover{border-color:#6cefff;box-shadow:0 10px 28px #0006,0 0 20px #54f4ff1c}
+.avatar{background:linear-gradient(135deg,#8b51d6,#087e9e);border-color:#72edff;color:#fff;box-shadow:0 0 16px #54f4ff24}
+.participant-photo-button{border-color:#76eaff;box-shadow:0 0 18px #54f4ff25}
+.result{border-color:#51518a}
+.result span{color:#75f0ff;text-shadow:0 0 12px #54f4ff44}
+.thankyou{
+  background:linear-gradient(145deg,rgba(9,66,75,.86),rgba(31,22,80,.9));
+  border-color:#62e9e0;box-shadow:0 0 28px #39e8db1c,inset 0 1px #ffffff1b;
+}
+.success-icon{background:linear-gradient(135deg,#0c7773,#1b4d87);color:#9ffff0;box-shadow:0 0 22px #38e9d966}
+.thankyou h3{color:#8ffff0;text-shadow:0 0 14px #38e9d955}
+.thankyou .joke{color:#ffe69a;text-shadow:0 0 12px #ffd66b44}
+.dhikrmath-link{background:linear-gradient(110deg,#7c5cff,#ed64d3,#49cfff);border:1px solid #ffffff66}
+footer span{color:#66edff}
+.organizer-link{transition:color .2s ease,text-shadow .2s ease}
+.organizer-link:hover{color:#80f4ff;text-shadow:0 0 12px #54f4ff88}
+.muslim-prompt{background:linear-gradient(145deg,#28205f,#103d5b);border-color:#73eaff;box-shadow:0 20px 70px #000c,0 0 32px #54f4ff28}
+.muslim-prompt-icon{background:linear-gradient(135deg,#5140a2,#087b91);border-color:#83efff;color:#fff}
+@media(max-width:520px){
+  body{background-attachment:scroll}
+  .hero,.panel{box-shadow:0 12px 32px #0006,inset 0 1px #ffffff12}
+}
+@media(prefers-reduced-motion:reduce){
+  body:before,body:after,.logo,.live,.hero:before{animation:none!important}
+}
