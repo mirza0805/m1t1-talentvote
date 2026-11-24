@@ -753,7 +753,7 @@ export default function App() {
   "Kenapa butang NO tak berhenti? Sebab cerita belum sampai 100!",
   "Ini lawak ke-100! Tahniah, anda berjaya menguji kesabaran butang. 🏆"
 ]
-              ][muslimNoCount - 1]}</p>
+              ][0][muslimNoCount - 1]}</p>
             )}
             <div className="muslim-prompt-actions">
               <button type="button" className="primary" onClick={() => { setShowMuslimPrompt(false); window.open('https://dhikrmath.pages.dev', '_blank', 'noopener,noreferrer') }}>YES</button>
