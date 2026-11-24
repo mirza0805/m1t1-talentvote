@@ -574,6 +574,54 @@ export default function App() {
         oscillator.start(startAt)
         oscillator.stop(startAt + duration + 0.04)
       }
+      // Synthetic stadium crowd bed: layered filtered noise plus rhythmic handclaps.
+      const crowdBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 2, audioContext.sampleRate)
+      const crowdSamples = crowdBuffer.getChannelData(0)
+      for (let i = 0; i < crowdSamples.length; i++) crowdSamples[i] = (Math.random() * 2 - 1) * 0.72
+      const playCrowdRoar = (startAt, duration) => {
+        ;[
+          { type: 'lowpass', frequency: 520, q: 0.7, volume: 0.34 },
+          { type: 'bandpass', frequency: 1450, q: 0.65, volume: 0.24 },
+          { type: 'bandpass', frequency: 2850, q: 0.8, volume: 0.10 }
+        ].forEach(layer => {
+          const source = audioContext.createBufferSource()
+          const filter = audioContext.createBiquadFilter()
+          const gain = audioContext.createGain()
+          source.buffer = crowdBuffer
+          source.loop = true
+          filter.type = layer.type
+          filter.frequency.value = layer.frequency
+          filter.Q.value = layer.q
+          gain.gain.setValueAtTime(0.0001, startAt)
+          gain.gain.linearRampToValueAtTime(layer.volume, startAt + 0.65)
+          gain.gain.setValueAtTime(layer.volume, startAt + Math.max(0.7, duration - 0.75))
+          gain.gain.linearRampToValueAtTime(0.0001, startAt + duration)
+          source.connect(filter)
+          filter.connect(gain)
+          gain.connect(master)
+          source.start(startAt)
+          source.stop(startAt + duration + 0.05)
+        })
+        // Short broadband transients create a handclap rhythm over the crowd roar.
+        for (let i = 0; i < 26; i++) {
+          const at = startAt + 0.12 + i * 0.16
+          const source = audioContext.createBufferSource()
+          const filter = audioContext.createBiquadFilter()
+          const gain = audioContext.createGain()
+          source.buffer = crowdBuffer
+          source.playbackRate.value = 1.4 + (i % 4) * 0.22
+          filter.type = 'highpass'
+          filter.frequency.value = 1050 + (i % 3) * 380
+          gain.gain.setValueAtTime(0.0001, at)
+          gain.gain.linearRampToValueAtTime(0.10 + (i % 3) * 0.025, at + 0.008)
+          gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.105)
+          source.connect(filter)
+          filter.connect(gain)
+          gain.connect(master)
+          source.start(at)
+          source.stop(at + 0.12)
+        }
+      }
 
       stream = canvas.captureStream(30)
       audioDestination.stream.getAudioTracks().forEach(track => stream.addTrack(track))
@@ -615,6 +663,7 @@ export default function App() {
       let replayIndex = 0
       let nextBeatAt = 0
       let finalChordPlayed = false
+      let podiumSoundPlayed = false
 
       const roundedRect = (x, y, w, h, radius, fill) => {
         ctx.fillStyle = fill
@@ -674,7 +723,65 @@ export default function App() {
       const getRanking = () => people.map(person => ({ ...person, votes: counts[person.id] || 0 }))
         .sort((a, b) => (b.votes - a.votes) ||
           (a.id === championId ? 1 : b.id === championId ? -1 : a.name.localeCompare(b.name)))
+      const drawAudience = progress => {
+        ctx.save()
+        const pulse = 0.5 + 0.5 * Math.sin(progress * Math.PI * 34)
+        // Sweeping arena spotlights.
+        ;[150, 1130].forEach((x, i) => {
+          ctx.save()
+          ctx.translate(x, 0)
+          ctx.rotate((Math.sin(progress * 22 + i * 2) * 0.13) + (i ? -0.16 : 0.16))
+          const beam = ctx.createLinearGradient(0, 0, 0, 620)
+          beam.addColorStop(0, 'rgba(255,236,170,' + (0.12 + pulse * 0.07) + ')')
+          beam.addColorStop(1, 'rgba(255,236,170,0)')
+          ctx.fillStyle = beam
+          ctx.beginPath()
+          ctx.moveTo(-20, 0); ctx.lineTo(20, 0); ctx.lineTo(245, 620); ctx.lineTo(-245, 620)
+          ctx.closePath(); ctx.fill()
+          ctx.restore()
+        })
+        // Animated audience silhouettes with waving arms.
+        for (let i = 0; i < 34; i++) {
+          const x = 12 + i * 38
+          const baseY = 700 + (i % 3) * 5
+          const wave = Math.sin(progress * 78 + i * 1.73)
+          const bob = Math.sin(progress * 65 + i * 2.1) * 4
+          const skin = i % 3 === 0 ? '#ffd28a' : i % 3 === 1 ? '#a9c9ff' : '#f5a6c9'
+          ctx.strokeStyle = skin
+          ctx.lineWidth = 5
+          ctx.lineCap = 'round'
+          ctx.beginPath()
+          ctx.moveTo(x - 7, baseY - 26 + bob); ctx.lineTo(x - 17 - wave * 7, baseY - 52 - Math.abs(wave) * 12)
+          ctx.moveTo(x + 7, baseY - 26 + bob); ctx.lineTo(x + 17 + wave * 7, baseY - 52 - Math.abs(wave) * 12)
+          ctx.stroke()
+          ctx.fillStyle = i % 2 ? '#263b70' : '#3c2d68'
+          ctx.beginPath(); ctx.arc(x, baseY - 34 + bob, 10, 0, Math.PI * 2); ctx.fill()
+          roundedRect(x - 12, baseY - 24 + bob, 24, 34, 8, i % 2 ? '#263b70' : '#3c2d68')
+        }
+        // Confetti continuously falls while the podium is on screen.
+        for (let i = 0; i < 58; i++) {
+          const x = (i * 97 + Math.sin(progress * 42 + i) * 28) % 1280
+          const y = 205 + ((progress * 560 + i * 53) % 420)
+          ctx.save()
+          ctx.translate(x, y)
+          ctx.rotate(progress * 18 + i)
+          ctx.fillStyle = ['#ffd65a', '#62eaff', '#ff78c8', '#a98bff'][i % 4]
+          ctx.globalAlpha = 0.55 + (i % 4) * 0.1
+          ctx.fillRect(-3, -7, 6, 14)
+          ctx.restore()
+        }
+        // Cheering prompts animate with the crowd.
+        ctx.textAlign = 'center'
+        ctx.font = '900 20px Arial'
+        ctx.fillStyle = '#ffe6a1'
+        ctx.shadowColor = '#ffcf56'
+        ctx.shadowBlur = 18
+        ctx.fillText('MAKE SOME NOISE!', 640, 238 + Math.sin(progress * 60) * 4)
+        ctx.shadowBlur = 0
+        ctx.restore()
+      }
       const drawPodium = (ordered, progress) => {
+        drawAudience(progress)
         ctx.textAlign = 'center'
         ctx.fillStyle = '#ffe6a1'
         ctx.font = '800 18px Arial'
@@ -892,6 +999,12 @@ export default function App() {
             const at = audioContext.currentTime + 0.05
             ;[392, 523.25, 659.25, 783.99, 1046.5].forEach((hz, i) => playTone(hz, at + i * 0.16, 1.55, 'triangle', 0.24))
             playTone(98, at, 1.8, 'sine', 0.30)
+          }
+          if (progress >= podiumStart && !podiumSoundPlayed) {
+            podiumSoundPlayed = true
+            playCrowdRoar(audioContext.currentTime + 0.03, Math.max(2.8, durationMs / 1000 * 0.12))
+            const at = audioContext.currentTime + 0.08
+            ;[523.25, 659.25, 783.99, 1046.5].forEach((hz, i) => playTone(hz, at + i * 0.12, 2.1, 'triangle', 0.13))
           }
           drawFrame(progress)
           const percent = Math.floor(progress * 100)
