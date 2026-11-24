@@ -1002,7 +1002,7 @@ export default function App() {
           }
           if (progress >= podiumStart && !podiumSoundPlayed) {
             podiumSoundPlayed = true
-            playCrowdRoar(audioContext.currentTime + 0.03, Math.max(2.8, durationMs / 1000 * 0.12))
+            playCrowdRoar(audioContext.currentTime + 0.03, Math.max(2.2, durationMs / 1000 * 0.095))
             const at = audioContext.currentTime + 0.08
             ;[523.25, 659.25, 783.99, 1046.5].forEach((hz, i) => playTone(hz, at + i * 0.12, 2.1, 'triangle', 0.13))
           }
