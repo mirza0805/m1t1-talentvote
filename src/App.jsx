@@ -77,6 +77,7 @@ export default function App() {
   const [message, setMessage] = useState('')
   const [voteReceipt, setVoteReceipt] = useState(false)
   const [voteAgainStep, setVoteAgainStep] = useState(0)
+  const [enlargedPhoto, setEnlargedPhoto] = useState(null)
 
   const competition = competitions.find(c => c.id === selected)
   const totalVotes = Object.values(totals).reduce((a, b) => a + b, 0)
@@ -411,12 +412,23 @@ export default function App() {
     // Results are refreshed when the Results tab is opened or its timer runs.
   }
 
+  const voteAgainJokes = [
+    'Nice try! Your vote is already safely recorded 😄',
+    'The voting box says: one vote only! 📦',
+    'Are you sure? The button is getting nervous.',
+    'Still here? Your dedication is impressive 😂',
+    'The system checked twice. Still one vote!',
+    'Even the trophy is asking you to stop 🏆',
+    'Your finger is working harder than the contestants!',
+    'Plot twist: clicking does not add another vote.',
+    'The vote counter is not fooled. Nice try!',
+    'Almost there... the button needs a holiday.',
+    'One more? The button is starting to sweat...',
+    'STRESS? CLICK HERE'
+  ]
+
   function handleVoteAgain() {
-    if (voteAgainStep === 0) {
-      setVoteAgainStep(1)
-    } else {
-      setVoteAgainStep(2)
-    }
+    setVoteAgainStep(current => Math.min(current + 1, 12))
   }
 
   return (
@@ -501,20 +513,29 @@ export default function App() {
             {voteReceipt && (
               <div className="thankyou">
                 <div className="success-icon"><CheckCircle size={27} /></div>
+                <div className="celebration-sparkles" aria-hidden="true"><span>✦</span><span>✧</span><span>✦</span><span>✧</span></div>
                 <h3>THANK YOU FOR VOTING!</h3>
                 <p>Your vote has been recorded. It cannot be cancelled or changed.</p>
-                <button className="vote-again" onClick={handleVoteAgain} disabled={voteAgainStep >= 2}>
-                  VOTE AGAIN
+                <button className="vote-again" onClick={handleVoteAgain}>
+                  {voteAgainStep >= 12 ? 'VOTE AGAIN 😂' : 'VOTE AGAIN'}
                 </button>
-                {voteAgainStep === 1 && <p className="joke">HAHA YOU ONLY CAN VOTE 1 TIME ONLY</p>}
-                {voteAgainStep === 2 && <p className="joke">LOL. TWICE!</p>}
+                {voteAgainStep > 0 && <p className="joke" key={voteAgainStep}>{voteAgainJokes[voteAgainStep - 1]}</p>}
+                {voteAgainStep >= 12 && (
+                  <a className="dhikrmath-link" href="https://dhikrmath.base44.app" target="_blank" rel="noopener noreferrer">
+                    STRESS? CLICK HERE ↗
+                  </a>
+                )}
               </div>
             )}
 
             {participants.map((p, index) => (
               <div className="participant" key={p.id}>
-                {p.image_url ? <img src={getDisplayImageUrl(p.image_url)} alt={p.name} /> :
-                  <div className="avatar">{p.name.charAt(0).toUpperCase()}</div>}
+                {p.image_url ? (
+                  <button className="participant-photo-button" type="button" onClick={() => setEnlargedPhoto({ url: getDisplayImageUrl(p.image_url), name: p.name })} aria-label={`View ${p.name}'s photo`}>
+                    <img src={getDisplayImageUrl(p.image_url)} alt={p.name} />
+                    <span>VIEW</span>
+                  </button>
+                ) : <div className="avatar">{p.name.charAt(0).toUpperCase()}</div>}
                 <div className="person"><strong>{p.name}</strong><small>CONTESTANT #{index + 1}</small></div>
                 <button className="primary vote-button"
                   disabled={loading || competition?.status !== 'open' || !user || hasVoted}
@@ -622,6 +643,16 @@ export default function App() {
           </section>
         )}
       </main>
+      {enlargedPhoto && (
+        <div className="photo-lightbox" role="dialog" aria-modal="true" aria-label={`${enlargedPhoto.name} photo`} onClick={() => setEnlargedPhoto(null)}>
+          <button className="photo-lightbox-close" type="button" onClick={() => setEnlargedPhoto(null)} aria-label="Close photo">×</button>
+          <div className="photo-lightbox-content" onClick={e => e.stopPropagation()}>
+            <img src={enlargedPhoto.url} alt={enlargedPhoto.name} />
+            <strong>{enlargedPhoto.name}</strong>
+            <small>Tap outside the photo to close</small>
+          </div>
+        </div>
+      )}
       <footer>M1T1 TALENTVOTE <span>•</span> THE STAGE IS YOURS
         <button className="organizer-link" onClick={() => { setTab('admin'); setShowAdminLogin(true) }}>ORGANIZER LOGIN</button>
       </footer>
