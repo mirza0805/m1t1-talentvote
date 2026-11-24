@@ -78,6 +78,7 @@ export default function App() {
   const [voteReceipt, setVoteReceipt] = useState(false)
   const [voteAgainStep, setVoteAgainStep] = useState(0)
   const [enlargedPhoto, setEnlargedPhoto] = useState(null)
+  const [showMuslimPrompt, setShowMuslimPrompt] = useState(false)
 
   const competition = competitions.find(c => c.id === selected)
   const totalVotes = Object.values(totals).reduce((a, b) => a + b, 0)
@@ -521,9 +522,9 @@ export default function App() {
                 </button>
                 {voteAgainStep > 0 && <p className="joke" key={voteAgainStep}>{voteAgainJokes[voteAgainStep - 1]}</p>}
                 {voteAgainStep >= 12 && (
-                  <a className="dhikrmath-link" href="https://dhikrmath.base44.app" target="_blank" rel="noopener noreferrer">
+                  <button className="dhikrmath-link" type="button" onClick={() => setShowMuslimPrompt(true)}>
                     STRESS? CLICK HERE ↗
-                  </a>
+                  </button>
                 )}
               </div>
             )}
@@ -643,6 +644,19 @@ export default function App() {
           </section>
         )}
       </main>
+      {showMuslimPrompt && (
+        <div className="photo-lightbox muslim-prompt-backdrop" role="dialog" aria-modal="true" aria-labelledby="muslim-prompt-title" onClick={() => setShowMuslimPrompt(false)}>
+          <div className="muslim-prompt" onClick={e => e.stopPropagation()}>
+            <div className="muslim-prompt-icon">☪</div>
+            <h2 id="muslim-prompt-title">Are you a Muslim?</h2>
+            <p>We have something useful to share with you.</p>
+            <div className="muslim-prompt-actions">
+              <button type="button" className="primary" onClick={() => { setShowMuslimPrompt(false); window.open('https://dhikrmath.base44.app', '_blank', 'noopener,noreferrer') }}>YES</button>
+              <button type="button" className="secondary" onClick={() => setShowMuslimPrompt(false)}>NO</button>
+            </div>
+          </div>
+        </div>
+      )}
       {enlargedPhoto && (
         <div className="photo-lightbox" role="dialog" aria-modal="true" aria-label={`${enlargedPhoto.name} photo`} onClick={() => setEnlargedPhoto(null)}>
           <button className="photo-lightbox-close" type="button" onClick={() => setEnlargedPhoto(null)} aria-label="Close photo">×</button>
