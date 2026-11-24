@@ -401,9 +401,17 @@ export default function App() {
       canvas.height = 720
       const ctx = canvas.getContext('2d')
       if (!ctx) throw new Error('Could not prepare the video canvas.')
-      const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
-        .find(type => MediaRecorder.isTypeSupported(type))
-      if (!mimeType) throw new Error('WebM recording is not supported. Try the latest Chrome.')
+      const supportedFormats = [
+        { mime: 'video/mp4;codecs="avc1.42E01E,mp4a.40.2"', ext: 'mp4' },
+        { mime: 'video/mp4', ext: 'mp4' },
+        { mime: 'video/webm;codecs=vp9,opus', ext: 'webm' },
+        { mime: 'video/webm;codecs=vp8,opus', ext: 'webm' },
+        { mime: 'video/webm', ext: 'webm' }
+      ]
+      const selectedFormat = supportedFormats.find(format => MediaRecorder.isTypeSupported(format.mime))
+      if (!selectedFormat) throw new Error('MP4/WebM recording is not supported. Please use updated Chrome.')
+      const mimeType = selectedFormat.mime
+      const fileExtension = selectedFormat.ext
 
       const people = participants.map(p => ({ id: p.id, name: p.name, image_url: p.image_url, image: null }))
       await Promise.all(people.map(person => new Promise(resolve => {
@@ -450,6 +458,13 @@ export default function App() {
       const durationMs = Math.max(5, Number(timelineDuration)) * 1000
       const podiumStart = 0.90
       const counts = {}
+      const finalCounts = {}
+      events.forEach(event => { finalCounts[event.participant_id] = (finalCounts[event.participant_id] || 0) + 1 })
+      const finalOrder = people.map(person => ({ ...person, votes: finalCounts[person.id] || 0 }))
+        .sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name))
+      // Cinematic opening: the eventual winner starts at the bottom, then makes a staged climb.
+      // This is explicitly a visual replay; the final podium and vote totals remain official.
+      const comebackStartOrder = [...finalOrder.slice(1).reverse(), ...finalOrder.slice(0, 1)]
       let nextBeatAt = 0
       let finalChordPlayed = false
 
@@ -557,6 +572,15 @@ export default function App() {
         drawBackground(progress)
         const ordered = getRanking()
         const total = Object.values(counts).reduce((sum, value) => sum + value, 0)
+        const comebackRaw = Math.max(0, Math.min(1, (progress - 0.70) / 0.20))
+        const comebackEase = comebackRaw * comebackRaw * (3 - 2 * comebackRaw)
+        const startSlots = new Map(comebackStartOrder.map((person, index) => [person.id, index]))
+        const finalSlots = new Map(finalOrder.map((person, index) => [person.id, index]))
+        const displayOrdered = [...ordered].sort((a, b) => {
+          const aSlot = (startSlots.get(a.id) ?? 0) * (1 - comebackEase) + (finalSlots.get(a.id) ?? 0) * comebackEase
+          const bSlot = (startSlots.get(b.id) ?? 0) * (1 - comebackEase) + (finalSlots.get(b.id) ?? 0) * comebackEase
+          return aSlot - bSlot
+        })
         if (progress >= podiumStart) {
           drawPodium(ordered, progress)
           return
@@ -566,7 +590,10 @@ export default function App() {
         ctx.fillText('M1T1  •  TALENTVOTE', 72, 62)
         ctx.fillStyle = '#ffffff'
         ctx.font = '900 43px Arial'
-        ctx.fillText(progress < 0.08 ? 'THE VOTE IS ON' : progress > 0.72 ? 'WHO WILL TAKE THE CROWN?' : 'LIVE VOTE TIMELINE', 72, 119)
+        ctx.fillText(progress < 0.08 ? 'THE VOTE IS ON' : progress > 0.70 ? 'THE COMEBACK IS ON!' : 'LIVE VOTE TIMELINE', 72, 119)
+        ctx.fillStyle = '#ff9bd5'
+        ctx.font = '800 14px Arial'
+        ctx.fillText('CINEMATIC COMEBACK REPLAY  •  DISPLAY ORDER IS DRAMATIZED', 74, 177)
         ctx.fillStyle = '#c9c6f2'
         ctx.font = '500 19px Arial'
         ctx.fillText(competition.name, 74, 154)
@@ -585,7 +612,7 @@ export default function App() {
         const maxVotes = Math.max(1, ...ordered.map(p => p.votes))
         const rowTop = 235
         const rowGap = Math.min(67, 405 / Math.max(1, ordered.length))
-        ordered.forEach((person, index) => {
+        displayOrdered.forEach((person, index) => {
           const y = rowTop + index * rowGap
           const isTopThree = index < 3
           const ring = index === 0 ? '#ffd65a' : index === 1 ? '#c7d5ed' : index === 2 ? '#d99562' : '#8b68ff'
@@ -657,10 +684,11 @@ export default function App() {
           const closeRace = total > 0 && gap / Math.max(1, total) < 0.055
           const audioNow = audioContext.currentTime
           if (progress < podiumStart && audioNow >= nextBeatAt) {
-            const tense = closeRace && progress > 0.65
-            playTone(tense ? 78 : 58, audioNow, 0.22, 'sine', tense ? 0.34 : 0.22)
-            if (progress > 0.55) playTone(tense ? 520 : 390, audioNow + 0.035, 0.11, 'triangle', 0.07)
-            nextBeatAt = audioNow + (tense ? 0.38 : progress > 0.68 ? 0.58 : 0.82)
+            const comeback = progress > 0.70 && progress < podiumStart
+          const tense = (closeRace && progress > 0.65) || comeback
+          playTone(comeback ? 92 : tense ? 78 : 58, audioNow, 0.22, 'sine', comeback ? 0.38 : tense ? 0.34 : 0.22)
+          if (progress > 0.55) playTone(comeback ? 660 : tense ? 520 : 390, audioNow + 0.035, 0.11, 'triangle', comeback ? 0.11 : 0.07)
+          nextBeatAt = audioNow + (comeback ? 0.24 : tense ? 0.38 : progress > 0.68 ? 0.58 : 0.82)
           }
           if (progress >= podiumStart && !finalChordPlayed) {
             finalChordPlayed = true
@@ -693,11 +721,13 @@ export default function App() {
       setTimelineVideoUrl(videoUrl)
       const link = document.createElement('a')
       link.href = videoUrl
-      link.download = 'M1T1-TalentVote-Thriller-Timeline.webm'
+      link.download = 'M1T1-TalentVote-Thriller-Timeline.' + fileExtension
       document.body.appendChild(link)
       link.click()
       link.remove()
-      notify('Thriller timeline generated with suspense audio and final Top 3 podium.')
+      notify(fileExtension === 'mp4'
+        ? 'MP4 thriller comeback video generated and downloaded.'
+        : 'This browser cannot record MP4 directly, so a WebM video was generated instead. Try another updated browser for MP4.')
     } catch (error) {
       if (recorder && recorder.state !== 'inactive') recorder.stop()
       if (stream) stream.getTracks().forEach(track => track.stop())
@@ -1109,7 +1139,7 @@ export default function App() {
             {isAdmin && competition?.status === 'closed' && (
               <div className="timeline-export">
                 <h3>Vote Timeline Video</h3>
-                <p>Create a moving graph that shows how each participant's votes accumulated over time. The video ends with the official final results.</p>
+                <p>Create a thriller-style replay with a staged last-minute comeback, suspense audio, participant photos and an official Top 3 finale. The comeback changes the visual order only; the final vote totals remain accurate.</p>
                 <label htmlFor="timeline-duration">VIDEO DURATION</label>
                 <select id="timeline-duration" value={timelineDuration}
                   onChange={e => setTimelineDuration(Number(e.target.value))} disabled={timelineBusy}>
@@ -1126,8 +1156,8 @@ export default function App() {
                 {timelineVideoUrl && (
                   <div className="timeline-preview">
                     <video src={timelineVideoUrl} controls playsInline />
-                    <a href={timelineVideoUrl} download="M1T1-TalentVote-Timeline.webm">DOWNLOAD VIDEO AGAIN</a>
-                    <small>Format: WebM · 16:9 · Up to 3 minutes</small>
+                    <a href={timelineVideoUrl} download="M1T1-TalentVote-Thriller-Timeline">DOWNLOAD VIDEO AGAIN</a>
+                    <small>Format: MP4 when supported by your browser (otherwise WebM) · 16:9 · Up to 3 minutes</small>
                   </div>
                 )}
                 <small className="upload-hint">Available to the organizer after voting closes. Use an updated Chrome browser to generate and save the video.</small>
