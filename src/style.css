@@ -272,3 +272,159 @@ footer span{color:#66edff}
 .timeline-preview a{color:#83efff;font-size:11px;font-weight:900;letter-spacing:.8px;text-decoration:none}
 .timeline-preview a:hover{text-decoration:underline}
 .timeline-preview small{color:#aaa8d4;font-size:10px}
+
+
+
+/* NEON ARENA — refreshed visual system */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root{
+  --tv-cyan:#58f5ff;
+  --tv-blue:#438bff;
+  --tv-violet:#9b70ff;
+  --tv-pink:#ff4fca;
+  --tv-ink:#070916;
+  --tv-panel:rgba(13,18,43,.82);
+  --tv-line:rgba(105,225,255,.24);
+}
+body{
+  font-family:'Space Grotesk',Inter,system-ui,sans-serif;
+  background-color:var(--tv-ink);
+  background-image:
+    linear-gradient(rgba(81,157,255,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(81,157,255,.045) 1px,transparent 1px),
+    radial-gradient(ellipse at 50% -12%,rgba(85,75,255,.28),transparent 48%),
+    radial-gradient(ellipse at 4% 42%,rgba(0,220,255,.13),transparent 32%),
+    radial-gradient(ellipse at 96% 72%,rgba(255,55,195,.12),transparent 32%),
+    #070916;
+  background-size:42px 42px,42px 42px,auto,auto,auto,auto;
+}
+body:after{
+  width:100%;height:100%;inset:0;border-radius:0;filter:none;opacity:.14;
+  background:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,rgba(120,210,255,.055) 4px);
+  animation:none;
+}
+header{
+  max-width:1120px;padding:22px 26px 14px;
+}
+.brand h1{
+  font-family:Orbitron,'Space Grotesk',sans-serif;
+  letter-spacing:-1px;font-size:clamp(18px,3vw,24px);
+}
+.brand p{color:#86eaff;letter-spacing:3px}
+.logo{
+  border-radius:18px;border-color:#58f5ff88;
+  box-shadow:0 0 0 4px #58f5ff0b,0 0 30px #58f5ff35,0 0 55px #9b70ff25;
+}
+.live{
+  font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:1px;
+  border-radius:8px;padding:10px 13px;
+}
+main{max-width:940px;margin:26px auto;padding:0 22px}
+.hero{
+  min-height:245px;padding:clamp(26px,5vw,48px);
+  border-radius:28px;border:1px solid #72edff55;
+  background:
+    linear-gradient(110deg,rgba(8,20,54,.96),rgba(27,17,76,.91) 54%,rgba(6,48,75,.92)),
+    #10102b;
+  box-shadow:0 22px 70px #0009,0 0 0 1px #a06bff20,0 0 45px #27dfff18,inset 0 1px #ffffff20;
+}
+.hero h2{
+  max-width:700px;font-family:Orbitron,'Space Grotesk',sans-serif;
+  line-height:1.14;letter-spacing:-1.5px;
+  text-shadow:0 0 28px #65eaff25;
+}
+.eyebrow{font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:3.5px}
+.hero p{max-width:600px;line-height:1.65}
+.hero-rule{height:2px;box-shadow:0 0 15px #58f5ff88}
+.stats{gap:clamp(18px,5vw,48px)}
+.stats strong{font-family:Orbitron,sans-serif;font-size:clamp(20px,4vw,27px)}
+.stats small{letter-spacing:1.1px;text-transform:uppercase;font-size:9px}
+.panel,.toast{
+  border:1px solid var(--tv-line);border-radius:22px;
+  background:linear-gradient(145deg,rgba(15,22,51,.94),rgba(10,15,36,.91));
+  box-shadow:0 18px 48px #0007,inset 0 1px #ffffff12,0 0 26px #4d8cff0b;
+}
+.panel{padding:clamp(18px,3vw,28px)}
+.panel h2{font-family:Orbitron,'Space Grotesk',sans-serif;font-size:clamp(15px,2vw,19px);letter-spacing:.2px}
+.panel h2 svg{color:var(--tv-cyan);filter:drop-shadow(0 0 8px #58f5ff88)}
+.panel h3,.competition-picker label,.panel label{
+  color:#7defff;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:1.5px;
+}
+nav{
+  gap:6px;margin:22px 0;padding:7px;border-radius:15px;
+  border:1px solid #64eaff38;background:rgba(5,10,30,.86);
+  box-shadow:0 12px 35px #0006,0 0 25px #4a73ff10;
+}
+nav button{
+  min-height:44px;font-family:Orbitron,sans-serif;font-size:10px;
+  letter-spacing:.5px;border:1px solid transparent;
+}
+nav button.active{
+  border-color:#85f3ff70;
+  background:linear-gradient(110deg,#6039b8,#254fbb 58%,#087b9d);
+  box-shadow:0 0 0 1px #6cf2ff22,0 0 22px #40cfff38,inset 0 1px #ffffff30;
+}
+.primary,.vote-again{
+  min-height:43px;font-family:Orbitron,sans-serif;font-size:10px;
+  letter-spacing:.8px;border-radius:11px;
+  background:linear-gradient(105deg,#65f4ff,#9e83ff 52%,#ff77d7);
+  box-shadow:0 7px 24px #4bdfff30,0 0 0 1px #ffffff40,inset 0 1px #ffffff80;
+}
+.secondary,.danger{
+  min-height:41px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:.4px;
+}
+select,input{
+  min-height:45px;border-radius:11px;
+  background:rgba(4,10,29,.94);border:1px solid #6c85c966;
+}
+.participant{
+  min-height:88px;padding:13px 15px;border-radius:16px;
+  background:linear-gradient(105deg,rgba(23,29,69,.94),rgba(8,37,61,.92));
+  border:1px solid #6d8dd044;
+  box-shadow:inset 0 1px #ffffff0b,0 8px 24px #0003;
+}
+.participant:before{width:3px;box-shadow:0 0 12px #58f5ff}
+.participant-photo-button,.avatar{
+  border-radius:14px;border-color:#70efff;
+  box-shadow:0 0 18px #58f5ff25;
+}
+.person strong{font-size:14px;letter-spacing:.15px}
+.person small{color:#8fc7e6}
+.vote-button{font-size:9px}
+.result{padding:16px 2px;border-color:#5c6e9b55}
+.result span{font-family:Orbitron,sans-serif;font-size:13px}
+.admin-person,.edit-competition,.email-login,.voter-session,.image-preview{
+  border-radius:15px;border-color:#5c9bb866;
+  background:linear-gradient(110deg,rgba(20,28,66,.92),rgba(9,36,58,.9));
+}
+.thankyou{
+  border-radius:22px;border-color:#58f5ff99;
+  box-shadow:0 0 0 1px #58f5ff22,0 0 42px #31dce833,inset 0 1px #ffffff25;
+}
+.thankyou h3{font-family:Orbitron,sans-serif;letter-spacing:1px}
+.success-icon{border:1px solid #7affed88;box-shadow:0 0 26px #36e7d777}
+.timeline-export{
+  border-radius:20px;border-color:#68dfff66;
+  background:linear-gradient(145deg,rgba(30,22,75,.94),rgba(6,37,61,.94));
+  box-shadow:0 16px 44px #0006,0 0 30px #6c65ff18;
+}
+.timeline-export h3{font-family:Orbitron,sans-serif;letter-spacing:.7px}
+.timeline-export .form-button{background:linear-gradient(105deg,#65f4ff,#9e83ff 52%,#ff77d7)}
+footer{font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{
+  outline:2px solid #7af4ff;outline-offset:3px;
+}
+@media(max-width:520px){
+  header{padding:16px 14px 10px}
+  main{margin-top:15px;padding:0 13px}
+  .hero{min-height:0;padding:25px 20px;border-radius:21px}
+  .hero h2{letter-spacing:-.8px}
+  .panel{border-radius:18px}
+  nav{position:sticky;top:7px;z-index:20}
+  nav button{font-size:8px;letter-spacing:0;min-height:42px}
+  .participant{min-height:78px}
+}
+@media(prefers-reduced-motion:reduce){
+  body:before,body:after,.logo,.live,.hero:before{animation:none!important}
+}
