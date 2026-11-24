@@ -79,8 +79,7 @@ export default function App() {
   const [voteAgainStep, setVoteAgainStep] = useState(0)
   const [enlargedPhoto, setEnlargedPhoto] = useState(null)
   const [showMuslimPrompt, setShowMuslimPrompt] = useState(false)
-  const [muslimNoCount, setMuslimNoCount] = useState(0)
-  const [muslimNoJoke, setMuslimNoJoke] = useState('')
+  const [muslimPromptSeen, setMuslimPromptSeen] = useState(false)
 
   const competition = competitions.find(c => c.id === selected)
   const totalVotes = Object.values(totals).reduce((a, b) => a + b, 0)
@@ -431,8 +430,113 @@ export default function App() {
   ]
 
   function handleVoteAgain() {
-    setVoteAgainStep(current => Math.min(current + 1, 12))
+    setVoteAgainStep(current => Math.min(current + 1, 12 + extendedVoteJokes.length))
   }
+
+  const extendedVoteJokes = [
+  "Why did the computer go to the doctor? It caught a virus.",
+  "Why was the maths book sad? It had too many problems.",
+  "Why did the Wi-Fi break up with the router? The connection was weak.",
+  "Why did the phone wear glasses? It lost its contacts.",
+  "Why was the calculator so confident? It knew it could count on itself.",
+  "Why did the keyboard win an award? It had all the right keys.",
+  "Why was the clock always calm? It knew how to take its time.",
+  "Why did the printer get annoyed? Everyone kept pushing its buttons.",
+  "Why did the cloud bring an umbrella? It heard there might be a forecast.",
+  "Why did the bread go to school? It wanted to be a little smarter.",
+  "Why was the fan so popular? Everyone thought it was cool.",
+  "Why did the shoes never get lost? They always followed the right steps.",
+  "Why did the door get promoted? It was always open to new opportunities.",
+  "Why did the ruler do well in class? It knew how to measure up.",
+  "Why did the mirror get a good review? It reflected well on everyone.",
+  "Why did the moon skip overtime? It only works night shifts.",
+  "Why did the ice cube avoid arguments? It didn't want things to heat up.",
+  "Why did the egg stay out of trouble? It didn't want to crack under pressure.",
+  "Why was the tree good at maths? It knew its roots.",
+  "Why was the history book tired? It had too many old stories.",
+  "Why was the backpack strong? It carried everyone's problems.",
+  "Why was the eraser so helpful? It always fixed mistakes.",
+  "Why did the chair stay quiet? It preferred to sit this one out.",
+  "Why was the table relaxed? It had everything under control.",
+  "Why did the elevator get promoted? It was always moving up.",
+  "Why did the map never panic? It always knew the way.",
+  "Why did the umbrella get a medal? It stood up for people in the rain.",
+  "Why did the fish avoid the internet? It was afraid of phishing.",
+  "Why did the cat sit near the computer? It wanted to keep an eye on the mouse.",
+  "Why did the bee get hired? It was always buzzing with ideas.",
+  "Why did the turtle never rush? It believed in a slow and steady pace.",
+  "Why did the octopus multitask so well? It had everything handled.",
+  "Why did the bicycle fall over? It was two-tired.",
+  "Why did the car love music? It had a great stereo.",
+  "Why did the airplane feel confident? It had a solid flight plan.",
+  "Why did the rocket arrive early? It wanted to make a quick launch.",
+  "Why did the scientist bring a ladder? To reach a higher level.",
+  "Why was the atom so friendly? It was positive about making bonds.",
+  "Why did the magnet make friends easily? It was attractive.",
+  "Why was gravity so serious? It always brought everyone down to earth.",
+  "Why are stars so good at their jobs? They always shine.",
+  "Why did the rainbow feel cheerful? It saw the bright side in every colour.",
+  "Why did calculus need a break? It was reaching its limit.",
+  "Why did the integral invite everyone? It liked bringing things together.",
+  "Why was the graph so confident? It knew where things were heading.",
+  "Why did the fraction feel incomplete? It had not been simplified.",
+  "Why is zero so important? It never lets anyone down.",
+  "Why did the triangle stay calm? It had three points to make.",
+  "Why did the circle avoid arguments? It didn't want any sharp corners.",
+  "Why did physics students stay curious? They always wanted to know the force behind things.",
+  "Why did chemistry students make good friends? They knew how to bond.",
+  "Why did the biology book get popular? It had a lot of cell stories.",
+  "Why did the engineer bring a pencil? To draw a better future.",
+  "Why did the welder pay attention? A good connection matters.",
+  "Why was the screw so dependable? It always held things together.",
+  "Why was the sponge a good listener? It absorbed every detail.",
+  "Why did the soap feel proud? It made a clean getaway.",
+  "Why was the cup relaxed? It knew when to let things go.",
+  "Why did the battery feel tired? It was running low.",
+  "Why did the charger have so many friends? It gave everyone energy.",
+  "Why was the app always busy? It kept getting updates.",
+  "Why did the programmer smile? The bug finally left.",
+  "Why was the robot polite? It was programmed to be nice.",
+  "Why did the AI stay awake? It had too many tabs open.",
+  "Why did the pencil get promoted? It had a point.",
+  "Why did the notebook look confident? It had everything written down.",
+  "Why did the orange stop rolling? It ran out of juice.",
+  "Why did the cookie go to the doctor? It felt crumby.",
+  "Why did the banana wear sunscreen? It didn't want to peel.",
+  "Why did the tomato blush? It saw the salad dressing.",
+  "Why did the coffee file a police report? It got mugged.",
+  "Why did the tea call its friend? It needed a little support.",
+  "Why did the sandwich go to the gym? To get better buns.",
+  "Why did the computer get cold? It left its Windows open.",
+  "Why did the smartphone need a holiday? It had too many apps to handle.",
+  "Why did the camera get promoted? It focused on the details.",
+  "Why did the calendar look nervous? Its days were numbered.",
+  "Why did the music teacher need a ladder? To reach the high notes.",
+  "Why did the piano get locked out? It lost its keys.",
+  "Why did the football team bring string? To tie the score.",
+  "Why did the goalkeeper bring a pencil? To draw the line.",
+  "Why did the student eat their homework? The teacher said it was a piece of cake.",
+  "Why did the student bring a ladder to school? They wanted to go to high school.",
+  "Why did the exam paper look worried? It was under a lot of pressure.",
+  "Why did the library stay quiet? It had too many bookworms.",
+  "Why did the dictionary win the argument? It had the last word.",
+  "Why did the broom get a promotion? It swept the competition.",
+  "Why did the light bulb feel smart? It had a bright idea.",
+  "Why did the ocean say hello? It waved.",
+  "Why did the river keep moving? It was going with the flow.",
+  "Why did the mountain never gossip? It kept everything rock solid.",
+  "Why did the cloud get good grades? It was above average.",
+  "Why did the clock get invited to every party? It always had the time.",
+  "Why did the computer sing? It had a good motherboard.",
+  "Why did the mouse bring a suitcase? It was going on a click trip.",
+  "Why did the web developer go broke? They used up all their cache.",
+  "Why did the website visit the doctor? It had a broken link.",
+  "Why did the button feel famous? Everyone kept clicking with it.",
+  "Why did the joke cross the road? To get to the punchline.",
+  "Why did the trophy smile? It was having a winning day.",
+  "Why did the vote button take a break? It was tired of being pressed.",
+  "Why are you still clicking? The button is starting to think you're best friends. 😂"
+]
 
   const muslimNoJokes = [
   "Alamak, butang NO pun terkejut. 😂",
@@ -623,13 +727,19 @@ export default function App() {
                 <button className="vote-again" onClick={handleVoteAgain}>
                   {voteAgainStep >= 12 ? 'VOTE AGAIN 😂' : 'VOTE AGAIN'}
                 </button>
-                {voteAgainStep > 0 && <p className="joke" key={voteAgainStep}>{voteAgainJokes[voteAgainStep - 1]}</p>}
-                {voteAgainStep >= 12 && (
-                  <button className="dhikrmath-link" type="button" onClick={() => setShowMuslimPrompt(true)}>
+                {voteAgainStep > 0 && (
+                  <p className="joke" key={voteAgainStep}>
+                    {voteAgainStep <= 12 ? voteAgainJokes[voteAgainStep - 1] : extendedVoteJokes[voteAgainStep - 13]}
+                  </p>
+                )}
+                {voteAgainStep >= 12 && !muslimPromptSeen && (
+                  <button className="dhikrmath-link" type="button" onClick={() => {
+                    setMuslimPromptSeen(true)
+                    setShowMuslimPrompt(true)
+                  }}>
                     STRESS? CLICK HERE ↗
                   </button>
                 )}
-                {muslimNoJoke && <p className="joke" aria-live="polite">{muslimNoCount}/100 — {muslimNoJoke}</p>}
               </div>
             )}
 
@@ -757,10 +867,8 @@ export default function App() {
             <div className="muslim-prompt-actions">
               <button type="button" className="primary" onClick={() => { setShowMuslimPrompt(false); window.open('https://dhikrmath.pages.dev', '_blank', 'noopener,noreferrer') }}>YES</button>
               <button type="button" className="secondary" onClick={() => {
-                const nextCount = Math.min(muslimNoCount + 1, 100)
-                setMuslimNoCount(nextCount)
-                setMuslimNoJoke(muslimNoJokes[nextCount - 1])
                 setShowMuslimPrompt(false)
+                setVoteAgainStep(13)
               }}>NO</button>
             </div>
             {muslimNoCount >= 100 && <p>100/100 jokes unlocked. You win! 🎉</p>}
