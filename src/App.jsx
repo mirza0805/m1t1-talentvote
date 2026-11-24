@@ -871,7 +871,6 @@ export default function App() {
                 setVoteAgainStep(13)
               }}>NO</button>
             </div>
-            {muslimNoCount >= 100 && <p>100/100 jokes unlocked. You win! 🎉</p>}
           </div>
         </div>
       )}
