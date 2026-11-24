@@ -121,6 +121,10 @@ export default function App() {
       .eq('competition_id', selected).order('created_at')
     if (error) return notify(error.message)
     setParticipants(people || [])
+    if (!isAdmin) {
+      setTotals({})
+      return
+    }
     const { data: votes, error: voteError } = await supabase.rpc('get_vote_totals', {
       p_competition_id: selected
     })
@@ -128,7 +132,7 @@ export default function App() {
     const result = {}
     ;(votes || []).forEach(v => { result[v.participant_id] = Number(v.total_votes) })
     setTotals(result)
-  }, [selected])
+  }, [selected, isAdmin])
 
   useEffect(() => {
     let mounted = true
@@ -1110,7 +1114,7 @@ export default function App() {
           <div className="hero-rule" />
           <div className="stats">
             <div><Users /><strong>{participants.length}</strong><small>Participants</small></div>
-            <div><Vote /><strong>{isAdmin || competition?.status === 'closed' ? totalVotes : '—'}</strong><small>{isAdmin || competition?.status === 'closed' ? 'Total votes' : 'Votes hidden'}</small></div>
+            <div><Vote /><strong>{isAdmin ? totalVotes : '—'}</strong><small>{isAdmin ? 'Total votes' : 'Votes hidden'}</small></div>
             <div><Trophy /><strong>{competition?.status === 'open' ? 'LIVE' : '—'}</strong><small>Voting status</small></div>
           </div>
         </section>
@@ -1135,7 +1139,7 @@ export default function App() {
         <nav>
           <button className={tab === 'home' ? 'active' : ''} onClick={() => setTab('home')}>Overview</button>
           <button className={tab === 'vote' ? 'active' : ''} onClick={() => setTab('vote')}>Vote</button>
-          {(isAdmin || competition?.status === 'closed') && (
+          {isAdmin && (
             <button className={tab === 'results' ? 'active' : ''} onClick={() => setTab('results')}>Results</button>
           )}
         </nav>
@@ -1213,10 +1217,10 @@ export default function App() {
           </section>
         )}
 
-        {tab === 'results' && (isAdmin || competition?.status === 'closed') && (
+        {tab === 'results' && isAdmin && (
           <section className="panel">
             <h2><Trophy /> Final Results</h2>
-            <p>Official results are available because voting has closed.</p>
+            <p>Private organizer view. Only authorized admins can access official results.</p>
             {[...participants].sort((a, b) => (totals[b.id] || 0) - (totals[a.id] || 0))
               .map((p, index) => (
                 <div className="result" key={p.id}>
