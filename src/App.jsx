@@ -79,6 +79,7 @@ export default function App() {
   const [voteAgainStep, setVoteAgainStep] = useState(0)
   const [enlargedPhoto, setEnlargedPhoto] = useState(null)
   const [showMuslimPrompt, setShowMuslimPrompt] = useState(false)
+  const [muslimNoCount, setMuslimNoCount] = useState(0)
 
   const competition = competitions.find(c => c.id === selected)
   const totalVotes = Object.values(totals).reduce((a, b) => a + b, 0)
@@ -650,10 +651,119 @@ export default function App() {
             <div className="muslim-prompt-icon">☪</div>
             <h2 id="muslim-prompt-title">Are you a Muslim?</h2>
             <p>We have something useful to share with you.</p>
+            {muslimNoCount > 0 && (
+              <p className="joke" aria-live="polite">{muslimNoCount}/100 — {[
+[
+  "Alamak, butang NO pun terkejut. 😂",
+  "Awak tekan NO, tapi soalan masih setia menunggu.",
+  "NO diterima. Sistem sedang pura-pura kecewa.",
+  "Kenapa komputer sejuk? Sebab banyak Windows. 🪟",
+  "Kenapa buku matematik sedih? Banyak sangat masalah.",
+  "Wi-Fi pergi terapi sebab hubungan asyik terputus.",
+  "Kenapa telefon pakai cermin mata? Sebab hilang contacts.",
+  "Saya nak buat lawak pasal elektrik, tapi takut mengejutkan.",
+  "Kenapa kalkulator yakin? Semua jawapan ada dalam genggamannya.",
+  "Keyboard masuk pertandingan sebab ada banyak keyakinan.",
+  "Kenapa pensel tak bergaduh? Dia suka berdamai dan menggaris.",
+  "Jam dinding selalu sibuk. Masa tak pernah menunggunya.",
+  "Kenapa komputer suka muzik? Sebab ada banyak byte.",
+  "Printer marah sebab semua orang asyik tekan dia.",
+  "Kenapa awan tak pandai simpan rahsia? Semua benda dia luahkan sebagai hujan.",
+  "Kenapa roti pergi sekolah? Nak jadi lebih berisi.",
+  "Kenapa kipas popular? Semua orang suka dia bila panas.",
+  "Kenapa lampu selalu jujur? Dia terang-terangan.",
+  "Kenapa kasut tak pernah sesat? Dia ikut langkah.",
+  "Kenapa nasi lemak tenang? Sebab hidupnya cukup lengkap.",
+  "Kenapa sudu tak boleh menyimpan rahsia? Mulutnya selalu terbuka.",
+  "Kenapa pintu pandai berkawan? Dia selalu terbuka.",
+  "Kenapa pembaris disiplin? Dia tahu batas.",
+  "Kenapa cermin tak menipu? Dia pantulkan keadaan sebenar.",
+  "Kenapa bulan tak buat kerja lebih masa? Dia cuma kerja syif malam.",
+  "Kenapa kipas tak pandai berlari? Dia cuma berpusing di tempat sama.",
+  "Kenapa ais tak suka drama? Dia cepat cair.",
+  "Kenapa telur tak suka bergaduh? Takut retak hubungan.",
+  "Kenapa pokok pandai matematik? Banyak akar.",
+  "Kenapa buku sejarah penat? Banyak kenangan.",
+  "Kenapa beg sekolah kuat? Dia tanggung banyak perkara.",
+  "Kenapa pemadam selalu membantu? Dia suka betulkan kesilapan.",
+  "Kenapa marker terkenal? Sebab dia meninggalkan tanda.",
+  "Kenapa kerusi tak bercakap? Dia lebih suka duduk diam.",
+  "Kenapa meja tak pernah panik? Dia sentiasa stabil.",
+  "Kenapa lif pandai naik pangkat? Kerjanya memang naik turun.",
+  "Kenapa bas tak pernah bersendirian? Sentiasa ada penumpang.",
+  "Kenapa lampu isyarat tegas? Dia tahu bila perlu berhenti.",
+  "Kenapa peta tak keliru? Dia ada hala tuju.",
+  "Kenapa kasut sukan rajin? Selalu bergerak ke hadapan.",
+  "Kenapa payung baik hati? Dia melindungi orang ketika susah.",
+  "Kenapa hujan tak datang awal? Dia tunggu awan beri lampu hijau.",
+  "Kenapa ikan tak guna telefon? Takut kena phishing.",
+  "Kenapa kucing suka komputer? Sebab ada mouse.",
+  "Kenapa ayam lintas jalan? Nak pergi ke seberang, klasik betul.",
+  "Kenapa itik tak pandai berahsia? Semua benda quack-quack.",
+  "Kenapa lebah rajin? Dia sentiasa busy.",
+  "Kenapa kura-kura tak tergesa-gesa? Dia ikut pace sendiri.",
+  "Kenapa zirafah nampak jauh? Perspektif dia tinggi.",
+  "Kenapa panda suka rehat? Dia memang pakar bertenang.",
+  "Kenapa sotong pandai multitasking? Banyak tangan, banyak kerja.",
+  "Kenapa gunung tak bergosip? Dia simpan semuanya dalam batu.",
+  "Kenapa laut luas? Sebab dia tak suka berkira.",
+  "Kenapa sungai tak berhenti? Dia ada banyak aliran.",
+  "Kenapa basikal jatuh? Sebab dia dua-tayar-ed.",
+  "Kenapa kereta suka muzik? Ada stereo.",
+  "Kenapa motosikal tak suka rahsia? Ekzosnya kuat.",
+  "Kenapa kapal terbang yakin? Dia sentiasa ada flight plan.",
+  "Kenapa roket tak lambat? Dia suka launch awal.",
+  "Kenapa saintis bawa tangga? Nak capai tahap lebih tinggi.",
+  "Kenapa atom tak kesunyian? Dia ada electron.",
+  "Kenapa proton positif? Memang personalitinya begitu.",
+  "Kenapa neutron neutral? Dia tak mahu masuk campur.",
+  "Kenapa magnet popular? Semua orang tertarik kepadanya.",
+  "Kenapa graviti serius? Dia tak suka benda melayang.",
+  "Kenapa bulan tak bayar sewa? Dia tinggal di orbit.",
+  "Kenapa bintang rajin? Setiap malam dia muncul bekerja.",
+  "Kenapa matahari tak main sorok-sorok? Semua orang boleh nampak.",
+  "Kenapa pelangi ceria? Banyak warna dalam hidupnya.",
+  "Kenapa kalkulus susah move on? Masih mencari limit.",
+  "Kenapa integral suka berkawan? Dia suka mengumpulkan semuanya.",
+  "Kenapa graf yakin? Dia tahu arah trend.",
+  "Kenapa pecahan tak lengkap? Sebab belum dipermudahkan.",
+  "Kenapa nombor 8 tenang? Dia sudah seimbang.",
+  "Kenapa sifar penting? Jangan pandang rendah pada dia.",
+  "Kenapa nombor 1 yakin? Dia percaya pada diri sendiri.",
+  "Kenapa segi tiga stabil? Ada tiga point sokongan.",
+  "Kenapa bulatan tak ada sudut? Dia tak suka konflik tajam.",
+  "Kenapa segi empat kemas? Semua sudut tersusun.",
+  "Kenapa fizik suka teka-teki? Semua ada sebab dan kesan.",
+  "Kenapa kimia romantik? Mereka suka bonding.",
+  "Kenapa biologi suka cerita? Banyak cell plot twist.",
+  "Kenapa jurutera bawa pensel? Untuk melakar masa depan.",
+  "Kenapa welding perlukan fokus? Sambungan mesti tepat.",
+  "Kenapa skru setia? Dia sentiasa memegang janji.",
+  "Kenapa span pandai mendengar? Dia menyerap cerita.",
+  "Kenapa sabun bersih hati? Dia suka hilangkan masalah.",
+  "Kenapa cawan tak stress? Dia tahu cara mengosongkan fikiran.",
+  "Kenapa sudut 90 darjah tenang? Hidupnya right angle.",
+  "Kenapa komputer tak tidur? Banyak proses berjalan.",
+  "Kenapa bateri penat? Tenaganya semakin low.",
+  "Kenapa pengecas disukai? Dia selalu memberi tenaga.",
+  "Kenapa aplikasi rajin? Sentiasa ada update.",
+  "Kenapa kod programmer tersenyum? Akhirnya tiada bug.",
+  "Kenapa robot sopan? Dia ikut program.",
+  "Kenapa AI tak ponteng? Dia sentiasa online.",
+  "Kenapa butang NO tak berhenti? Sebab cerita belum sampai 100!",
+  "Ini lawak ke-100! Tahniah, anda berjaya menguji kesabaran butang. 🏆"
+]
+              ][muslimNoCount - 1]}</p>
+            )}
             <div className="muslim-prompt-actions">
               <button type="button" className="primary" onClick={() => { setShowMuslimPrompt(false); window.open('https://dhikrmath.pages.dev', '_blank', 'noopener,noreferrer') }}>YES</button>
-              <button type="button" className="secondary" onClick={() => setShowMuslimPrompt(false)}>NO</button>
+              {muslimNoCount < 100 ? (
+                <button type="button" className="secondary" onClick={() => setMuslimNoCount(count => Math.min(count + 1, 100))}>NO ({muslimNoCount}/100)</button>
+              ) : (
+                <button type="button" className="secondary" onClick={() => setShowMuslimPrompt(false)}>TUTUP</button>
+              )}
             </div>
+            {muslimNoCount >= 100 && <p>100/100 jokes unlocked. You win! 🎉</p>}
           </div>
         </div>
       )}
