@@ -395,6 +395,14 @@ export default function App() {
       const { data: events, error } = await supabase.rpc('get_vote_timeline', { p_competition_id: selected })
       if (error) throw error
       if (!events?.length) throw new Error('There are no votes to include in this video.')
+      const { data: officialTotals, error: totalsError } = await supabase.rpc('get_vote_totals', {
+        p_competition_id: selected
+      })
+      if (totalsError) throw totalsError
+      const officialTotal = (officialTotals || []).reduce((sum, row) => sum + Number(row.total_votes || 0), 0)
+      if (officialTotal !== events.length) {
+        throw new Error('Vote records and official totals do not match. Video generation stopped to protect result accuracy.')
+      }
 
       const canvas = document.createElement('canvas')
       canvas.width = 1280
@@ -464,6 +472,12 @@ export default function App() {
       const counts = {}
       const finalCounts = {}
       events.forEach(event => { finalCounts[event.participant_id] = (finalCounts[event.participant_id] || 0) + 1 })
+      const eventTotal = Object.values(finalCounts).reduce((sum, value) => sum + value, 0)
+      const officialByParticipant = {}
+      ;(officialTotals || []).forEach(row => { officialByParticipant[row.participant_id] = Number(row.total_votes || 0) })
+      if (eventTotal !== officialTotal || people.some(person => (finalCounts[person.id] || 0) !== (officialByParticipant[person.id] || 0))) {
+        throw new Error('Participant vote totals do not match the official results. Video generation stopped.')
+      }
       const finalOrder = people.map(person => ({ ...person, votes: finalCounts[person.id] || 0 }))
         .sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name))
       const championId = finalOrder[0]?.id
