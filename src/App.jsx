@@ -470,11 +470,29 @@ export default function App() {
   }
 
   async function changeStatus(status) {
-    if (!selected) return
-    const { error } = await supabase.from('competitions').update({ status }).eq('id', selected)
-    if (error) return notify(error.message)
+    if (!isAdmin || !selected || !['open', 'closed'].includes(status)) return
+    if (competition?.status === status) {
+      return notify(status === 'open' ? 'Voting is already OPEN.' : 'Voting is already CLOSED.')
+    }
+
+    setLoading(true)
+    const { data, error } = await supabase.from('competitions')
+      .update({ status })
+      .eq('id', selected)
+      .select('id, status')
+      .single()
+    setLoading(false)
+
+    if (error) return notify('Could not change voting status: ' + error.message)
+    if (!data || data.status !== status) {
+      return notify('The voting status could not be verified. Please refresh and try again.')
+    }
+
+    setCompetitions(current => current.map(item =>
+      item.id === data.id ? { ...item, status: data.status } : item
+    ))
     await loadCompetitions()
-    notify(status === 'open' ? 'Voting is now OPEN' : 'Voting is now CLOSED')
+    notify(status === 'open' ? 'Voting has been reopened. Existing votes are preserved.' : 'Voting has been closed. No new votes can be submitted.')
   }
 
   async function generateVoteTimelineVideo() {
@@ -1390,9 +1408,16 @@ export default function App() {
                     <h3>Competition Management</h3>
                     <p className="status-line">CURRENT STATUS: <strong>{competition.status?.toUpperCase()}</strong></p>
                     <div className="admin-actions">
-                      <button className="primary" onClick={() => changeStatus('open')}><CheckCircle size={14} /> OPEN VOTING</button>
-                      <button className="secondary" onClick={() => changeStatus('closed')}><XCircle size={14} /> CLOSE VOTING</button>
-                      <button className="danger" onClick={deleteCompetition}><Trash2 size={14} /> DELETE COMPETITION</button>
+                      {competition.status === 'open' ? (
+                        <button className="secondary" disabled={loading} onClick={() => changeStatus('closed')}>
+                          <XCircle size={14} /> {loading ? 'UPDATING...' : 'CLOSE VOTING'}
+                        </button>
+                      ) : (
+                        <button className="primary" disabled={loading} onClick={() => changeStatus('open')}>
+                          <CheckCircle size={14} /> {loading ? 'UPDATING...' : competition.status === 'closed' ? 'REOPEN VOTING' : 'OPEN VOTING'}
+                        </button>
+                      )}
+                      <button className="danger" disabled={loading} onClick={deleteCompetition}><Trash2 size={14} /> DELETE COMPETITION</button>
                     </div>
 
                     <h3>Participants in this Competition ({participants.length})</h3>
