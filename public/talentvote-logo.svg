@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+<title id="title">M1T1 TalentVote trophy logo</title>
+<defs>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff2a6"/><stop offset=".42" stop-color="#ffca32"/><stop offset="1" stop-color="#c87908"/></linearGradient>
+ <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#713ee0"/><stop offset="1" stop-color="#101c64"/></linearGradient>
+ <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<circle cx="64" cy="64" r="59" fill="#100b36" stroke="url(#gold)" stroke-width="4"/>
+<circle cx="64" cy="64" r="51" fill="url(#purple)" stroke="#3b9cff" stroke-width="2"/>
+<path d="M34 31h13v20c0 9 7 15 17 15s17-6 17-15V31h13v21c0 16-12 28-30 29v10h17v9H47v-9h17V81C46 80 34 68 34 52z" fill="url(#gold)" stroke="#fff0a0" stroke-width="1.5" filter="url(#glow)"/>
+<path d="M28 29h12v19c0 6 3 10 9 12l-5 10C33 66 28 59 28 48zM100 29H88v19c0 6-3 10-9 12l5 10c11-4 16-11 16-22z" fill="url(#gold)" stroke="#f9dc76" stroke-width="1.5"/>
+<path d="m64 14 3.5 7.2 8 1.2-5.8 5.7 1.4 8-7.1-3.8-7.1 3.8 1.4-8-5.8-5.7 8-1.2z" fill="#fff1a4"/>
+<path d="m28 91 10-5 6 6-11 7zM100 91l-10-5-6 6 11 7z" fill="#ffcf32"/>
+<path d="m42 60 14 13 30-32" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
