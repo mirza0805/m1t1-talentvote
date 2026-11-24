@@ -201,7 +201,7 @@ export default function App() {
     setLoading(true)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin }
+      options: { redirectTo: 'https://m1t1-talentvote.pages.dev' }
     })
     if (error) {
       setLoading(false)
