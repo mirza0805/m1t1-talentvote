@@ -383,19 +383,16 @@ export default function App() {
   }
 
   async function generateVoteTimelineVideo() {
-    if (!isAdmin || !competition || competition.status !== 'closed') {
-      return notify('Only the organizer can generate a video after voting has closed.')
-    }
-    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
-      return notify('Video recording is not supported in this browser. Please use an updated Chrome browser.')
-    }
+    if (!isAdmin || !competition || competition.status !== 'closed') return notify('Only the organizer can generate a video after voting has closed.')
+    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) return notify('Video recording is not supported. Please use updated Chrome.')
 
     setTimelineBusy(true)
     setTimelineProgress(0)
+    let audioContext
+    let stream
+    let recorder
     try {
-      const { data: events, error } = await supabase.rpc('get_vote_timeline', {
-        p_competition_id: selected
-      })
+      const { data: events, error } = await supabase.rpc('get_vote_timeline', { p_competition_id: selected })
       if (error) throw error
       if (!events?.length) throw new Error('There are no votes to include in this video.')
 
@@ -404,168 +401,312 @@ export default function App() {
       canvas.height = 720
       const ctx = canvas.getContext('2d')
       if (!ctx) throw new Error('Could not prepare the video canvas.')
-
-      const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+      const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
         .find(type => MediaRecorder.isTypeSupported(type))
-      if (!mimeType) throw new Error('This browser cannot encode a WebM video. Try the latest Chrome.')
+      if (!mimeType) throw new Error('WebM recording is not supported. Try the latest Chrome.')
 
-      const stream = canvas.captureStream(30)
-      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4200000 })
+      const people = participants.map(p => ({ id: p.id, name: p.name, image_url: p.image_url, image: null }))
+      await Promise.all(people.map(person => new Promise(resolve => {
+        if (!person.image_url) return resolve()
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        img.onload = () => { person.image = img; resolve() }
+        img.onerror = () => resolve()
+        img.src = person.image_url
+      })))
+
+      // Original suspense soundtrack is synthesized locally and embedded in the WebM.
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext
+      if (!AudioContextClass) throw new Error('Audio recording is not supported in this browser.')
+      audioContext = new AudioContextClass()
+      await audioContext.resume()
+      const master = audioContext.createGain()
+      const compressor = audioContext.createDynamicsCompressor()
+      const audioDestination = audioContext.createMediaStreamDestination()
+      master.gain.value = 0.22
+      master.connect(compressor)
+      compressor.connect(audioDestination)
+      const playTone = (frequency, startAt, duration, type, volume) => {
+        const oscillator = audioContext.createOscillator()
+        const gain = audioContext.createGain()
+        oscillator.type = type || 'sine'
+        oscillator.frequency.setValueAtTime(frequency, startAt)
+        gain.gain.setValueAtTime(0.0001, startAt)
+        gain.gain.exponentialRampToValueAtTime(volume || 0.15, startAt + 0.025)
+        gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration)
+        oscillator.connect(gain)
+        gain.connect(master)
+        oscillator.start(startAt)
+        oscillator.stop(startAt + duration + 0.04)
+      }
+
+      stream = canvas.captureStream(30)
+      audioDestination.stream.getAudioTracks().forEach(track => stream.addTrack(track))
+      recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5200000 })
       const chunks = []
-      const people = participants.map(p => ({ id: p.id, name: p.name }))
-      const firstTime = new Date(events[0].voted_at).getTime()
-      const lastTime = new Date(events[events.length - 1].voted_at).getTime()
+      const firstTime = Math.min(...events.map(e => new Date(e.voted_at).getTime()))
+      const lastTime = Math.max(...events.map(e => new Date(e.voted_at).getTime()))
       const timeSpan = Math.max(1, lastTime - firstTime)
       const durationMs = Math.max(5, Number(timelineDuration)) * 1000
+      const podiumStart = 0.90
+      const counts = {}
+      let nextBeatAt = 0
+      let finalChordPlayed = false
 
-      const drawFrame = (progress, counts, finalFrame) => {
-        const w = canvas.width, h = canvas.height
-        const bg = ctx.createLinearGradient(0, 0, w, h)
-        bg.addColorStop(0, '#09091f')
-        bg.addColorStop(.55, '#171044')
-        bg.addColorStop(1, '#071d43')
-        ctx.fillStyle = bg
-        ctx.fillRect(0, 0, w, h)
-
-        for (let i = 0; i < 34; i++) {
-          const x = (i * 197 + 73) % w
-          const y = (i * 113 + 41) % h
-          ctx.fillStyle = i % 3 === 0 ? 'rgba(96,220,255,.42)' : 'rgba(210,155,255,.28)'
-          ctx.beginPath()
-          ctx.arc(x, y, i % 4 === 0 ? 2 : 1, 0, Math.PI * 2)
-          ctx.fill()
+      const roundedRect = (x, y, w, h, radius, fill) => {
+        ctx.fillStyle = fill
+        ctx.beginPath()
+        ctx.roundRect(x, y, w, h, radius)
+        ctx.fill()
+      }
+      const drawAvatar = (person, x, y, radius, ring) => {
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(x, y, radius + 5, 0, Math.PI * 2)
+        ctx.fillStyle = ring
+        ctx.shadowColor = ring
+        ctx.shadowBlur = 22
+        ctx.fill()
+        ctx.shadowBlur = 0
+        ctx.beginPath()
+        ctx.arc(x, y, radius, 0, Math.PI * 2)
+        ctx.clip()
+        if (person.image) {
+          const img = person.image
+          const scale = Math.max((radius * 2) / img.width, (radius * 2) / img.height)
+          const iw = img.width * scale, ih = img.height * scale
+          ctx.drawImage(img, x - iw / 2, y - ih / 2, iw, ih)
+        } else {
+          ctx.fillStyle = '#292052'
+          ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2)
+          ctx.fillStyle = '#ffffff'
+          ctx.font = '800 48px Arial'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText(person.name.slice(0, 1).toUpperCase(), x, y)
         }
-
-        const glow = ctx.createRadialGradient(1080, 100, 10, 1080, 100, 440)
-        glow.addColorStop(0, 'rgba(0,220,255,.16)')
+        ctx.restore()
+      }
+      const drawBackground = progress => {
+        const bg = ctx.createLinearGradient(0, 0, 1280, 720)
+        bg.addColorStop(0, '#08091d')
+        bg.addColorStop(.52, '#1b1045')
+        bg.addColorStop(1, '#071d3c')
+        ctx.fillStyle = bg
+        ctx.fillRect(0, 0, 1280, 720)
+        const glow = ctx.createRadialGradient(1030, 130, 12, 1030, 130, 520)
+        glow.addColorStop(0, 'rgba(0,220,255,' + (0.35 + Math.sin(progress * Math.PI * 18) * 0.16) + ')')
         glow.addColorStop(1, 'rgba(0,220,255,0)')
         ctx.fillStyle = glow
-        ctx.fillRect(600, 0, 680, 480)
-
-        ctx.fillStyle = '#73eaff'
-        ctx.font = '800 19px Arial'
-        ctx.fillText('M1T1  •  TALENTVOTE', 72, 66)
+        ctx.fillRect(500, 0, 780, 560)
+        for (let i = 0; i < 52; i++) {
+          const x = (i * 197 + 73 + progress * (i % 4 + 1) * 95) % 1280
+          const y = (i * 113 + 41 + progress * (i % 3 + 1) * 55) % 720
+          ctx.fillStyle = i % 3 === 0 ? 'rgba(96,220,255,.55)' : 'rgba(210,155,255,.35)'
+          ctx.beginPath()
+          ctx.arc(x, y, i % 4 === 0 ? 2.5 : 1.4, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+      const getRanking = () => people.map(person => ({ ...person, votes: counts[person.id] || 0 }))
+        .sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name))
+      const drawPodium = (ordered, progress) => {
+        ctx.textAlign = 'center'
+        ctx.fillStyle = '#ffe6a1'
+        ctx.font = '800 18px Arial'
+        ctx.fillText('THE MOMENT WE HAVE BEEN WAITING FOR', 640, 92)
         ctx.fillStyle = '#ffffff'
-        ctx.font = '800 43px Arial'
-        ctx.fillText(finalFrame ? 'FINAL RESULTS' : 'LIVE VOTE TIMELINE', 72, 125)
+        ctx.font = '900 52px Arial'
+        ctx.fillText('FINAL TOP 3', 640, 150)
         ctx.fillStyle = '#c9c6f2'
         ctx.font = '500 19px Arial'
-        ctx.fillText(competition.name, 74, 160)
-
-        const ordered = people.map(person => ({ ...person, votes: counts[person.id] || 0 }))
-          .sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name))
+        ctx.fillText(competition.name, 640, 184)
+        const top = ordered.slice(0, 3)
+        const positions = [
+          { x: 640, y: 295, base: 435, height: 170, color: '#ffd65a', place: '1ST' },
+          { x: 355, y: 350, base: 485, height: 120, color: '#c7d5ed', place: '2ND' },
+          { x: 925, y: 370, base: 515, height: 90, color: '#d99562', place: '3RD' }
+        ]
+        positions.forEach((pos, index) => {
+          const person = top[index]
+          if (!person) return
+          const rise = Math.min(1, Math.max(0, (progress - podiumStart) / 0.07))
+          const y = pos.y + (1 - rise) * 65
+          drawAvatar(person, pos.x, y, 58, pos.color)
+          ctx.fillStyle = '#ffffff'
+          ctx.font = '800 22px Arial'
+          ctx.fillText(person.name.slice(0, 18), pos.x, y + 87)
+          ctx.fillStyle = '#dcd8ff'
+          ctx.font = '700 18px Arial'
+          ctx.fillText(person.votes.toLocaleString() + ' VOTES', pos.x, y + 113)
+          const baseY = pos.base + (1 - rise) * 65
+          const grad = ctx.createLinearGradient(pos.x - 110, baseY, pos.x + 110, baseY + pos.height)
+          grad.addColorStop(0, pos.color)
+          grad.addColorStop(1, index === 0 ? '#a86bff' : '#423b70')
+          roundedRect(pos.x - 112, baseY, 224, pos.height, 18, grad)
+          ctx.fillStyle = '#10102d'
+          ctx.font = '900 36px Arial'
+          ctx.fillText(pos.place, pos.x, baseY + 53)
+        })
+        ctx.textAlign = 'left'
+        ctx.fillStyle = '#ffffff'
+        ctx.font = '700 17px Arial'
+        ctx.fillText('TOTAL VOTES  •  ' + Object.values(counts).reduce((sum, value) => sum + value, 0).toLocaleString(), 72, 675)
+      }
+      const drawFrame = progress => {
+        drawBackground(progress)
+        const ordered = getRanking()
+        const total = Object.values(counts).reduce((sum, value) => sum + value, 0)
+        if (progress >= podiumStart) {
+          drawPodium(ordered, progress)
+          return
+        }
+        ctx.fillStyle = '#73eaff'
+        ctx.font = '800 19px Arial'
+        ctx.fillText('M1T1  •  TALENTVOTE', 72, 62)
+        ctx.fillStyle = '#ffffff'
+        ctx.font = '900 43px Arial'
+        ctx.fillText(progress < 0.08 ? 'THE VOTE IS ON' : progress > 0.72 ? 'WHO WILL TAKE THE CROWN?' : 'LIVE VOTE TIMELINE', 72, 119)
+        ctx.fillStyle = '#c9c6f2'
+        ctx.font = '500 19px Arial'
+        ctx.fillText(competition.name, 74, 154)
+        const topThree = ordered.slice(0, 3)
+        const gap = topThree.length > 1 ? Math.abs(topThree[0].votes - topThree[1].votes) : 0
+        const closeRace = total > 0 && gap / Math.max(1, total) < 0.055
+        if (progress > 0.72 && closeRace) {
+          ctx.fillStyle = '#ff83bb'
+          ctx.font = '900 22px Arial'
+          ctx.fillText('⚡ THE TOP 3 ARE NECK AND NECK!', 74, 190)
+        } else if (progress > 0.72) {
+          ctx.fillStyle = '#ffe6a1'
+          ctx.font = '800 19px Arial'
+          ctx.fillText('THE FINAL COUNTDOWN', 74, 190)
+        }
         const maxVotes = Math.max(1, ...ordered.map(p => p.votes))
-        const rowTop = 208
-        const rowGap = Math.min(66, 430 / Math.max(1, ordered.length))
-        const barMax = 650
-
+        const rowTop = 235
+        const rowGap = Math.min(67, 405 / Math.max(1, ordered.length))
         ordered.forEach((person, index) => {
           const y = rowTop + index * rowGap
-          const barY = y + 10
-          const barWidth = Math.max(4, (person.votes / maxVotes) * barMax)
-          ctx.fillStyle = index === 0 && person.votes > 0 ? '#ffe08a' : '#f1efff'
-          ctx.font = '700 19px Arial'
-          ctx.fillText((index + 1) + '. ' + person.name.slice(0, 27), 76, y)
+          const isTopThree = index < 3
+          const ring = index === 0 ? '#ffd65a' : index === 1 ? '#c7d5ed' : index === 2 ? '#d99562' : '#8b68ff'
+          if (isTopThree) drawAvatar(person, 112, y - 4, 25, ring)
+          else {
+            ctx.fillStyle = '#d5d1f5'
+            ctx.font = '700 17px Arial'
+            ctx.fillText((index + 1) + '.', 82, y + 5)
+          }
+          ctx.fillStyle = isTopThree ? '#ffffff' : '#d5d1f5'
+          ctx.font = isTopThree ? '800 20px Arial' : '600 17px Arial'
+          ctx.fillText((index + 1) + '. ' + person.name.slice(0, 22), isTopThree ? 160 : 115, y + 5)
           ctx.textAlign = 'right'
           ctx.fillStyle = '#ffffff'
           ctx.font = '800 20px Arial'
-          ctx.fillText(String(person.votes), 1160, y)
+          ctx.fillText(person.votes.toLocaleString(), 1160, y + 5)
           ctx.textAlign = 'left'
-          const track = ctx.createLinearGradient(0, 0, barMax, 0)
+          const barX = 410, barMax = 640, barY = y + 15
+          const track = ctx.createLinearGradient(barX, 0, barX + barMax, 0)
           track.addColorStop(0, index === 0 ? '#ffcf56' : '#8b68ff')
           track.addColorStop(1, index === 0 ? '#ff7dba' : '#37d9ef')
-          ctx.fillStyle = 'rgba(255,255,255,.10)'
-          ctx.beginPath()
-          ctx.roundRect(390, barY - 15, barMax, 15, 8)
-          ctx.fill()
-          ctx.fillStyle = track
-          ctx.beginPath()
-          ctx.roundRect(390, barY - 15, Math.min(barMax, barWidth), 15, 8)
-          ctx.fill()
+          roundedRect(barX, barY, barMax, 14, 8, 'rgba(255,255,255,.12)')
+          roundedRect(barX, barY, Math.max(3, (person.votes / maxVotes) * barMax), 14, 8, track)
         })
-
-        const total = Object.values(counts).reduce((sum, value) => sum + value, 0)
         ctx.fillStyle = '#c9c6f2'
         ctx.font = '600 17px Arial'
-        ctx.fillText('TOTAL VOTES', 76, 650)
+        ctx.fillText('TOTAL VOTES', 76, 664)
         ctx.fillStyle = '#ffffff'
-        ctx.font = '800 32px Arial'
-        ctx.fillText(String(total), 76, 688)
-
+        ctx.font = '900 31px Arial'
+        ctx.fillText(total.toLocaleString(), 76, 699)
         ctx.fillStyle = 'rgba(255,255,255,.17)'
-        ctx.fillRect(390, 656, 650, 8)
-        const progressGradient = ctx.createLinearGradient(390, 0, 1040, 0)
+        ctx.fillRect(410, 665, 640, 8)
+        const progressGradient = ctx.createLinearGradient(410, 0, 1050, 0)
         progressGradient.addColorStop(0, '#a879ff')
         progressGradient.addColorStop(1, '#46e7f2')
         ctx.fillStyle = progressGradient
-        ctx.fillRect(390, 656, 650 * progress, 8)
+        ctx.fillRect(410, 665, 640 * progress, 8)
         ctx.fillStyle = '#b9b5e7'
         ctx.font = '600 14px Arial'
         ctx.textAlign = 'right'
-        ctx.fillText(finalFrame ? 'OFFICIAL FINAL COUNT' : 'VOTES ACCUMULATING', 1160, 688)
+        ctx.fillText('VOTES ACCUMULATING', 1160, 699)
         ctx.textAlign = 'left'
       }
 
-      const counts = {}
       const streamPromise = new Promise((resolve, reject) => {
-        recorder.ondataavailable = event => {
-          if (event.data && event.data.size) chunks.push(event.data)
-        }
+        recorder.ondataavailable = event => { if (event.data && event.data.size) chunks.push(event.data) }
         recorder.onerror = () => reject(new Error('The browser could not record the video.'))
         recorder.onstop = () => resolve()
       })
-
-      drawFrame(0, counts, false)
+      drawFrame(0)
       recorder.start(1000)
       const startedAt = performance.now()
       let lastReported = -1
-
-      await new Promise((resolve) => {
-        const render = (now) => {
+      await new Promise(resolve => {
+        const render = now => {
           const elapsed = Math.min(durationMs, now - startedAt)
           const progress = Math.min(1, elapsed / durationMs)
-          const eventCutoff = firstTime + timeSpan * progress
+          const voteProgress = Math.min(1, progress / podiumStart)
+          const eventCutoff = firstTime + timeSpan * voteProgress
           for (const event of events) {
-            const eventTime = new Date(event.voted_at).getTime()
-            if (eventTime <= eventCutoff && !event._counted) {
+            if (!event._counted && new Date(event.voted_at).getTime() <= eventCutoff) {
               counts[event.participant_id] = (counts[event.participant_id] || 0) + 1
               event._counted = true
             }
           }
-          const finalFrame = progress >= 1
-          drawFrame(progress, counts, finalFrame)
+          const ranking = getRanking()
+          const gap = ranking.length > 1 ? Math.abs(ranking[0].votes - ranking[1].votes) : 0
+          const total = Object.values(counts).reduce((sum, value) => sum + value, 0)
+          const closeRace = total > 0 && gap / Math.max(1, total) < 0.055
+          const audioNow = audioContext.currentTime
+          if (progress < podiumStart && audioNow >= nextBeatAt) {
+            const tense = closeRace && progress > 0.65
+            playTone(tense ? 78 : 58, audioNow, 0.22, 'sine', tense ? 0.34 : 0.22)
+            if (progress > 0.55) playTone(tense ? 520 : 390, audioNow + 0.035, 0.11, 'triangle', 0.07)
+            nextBeatAt = audioNow + (tense ? 0.38 : progress > 0.68 ? 0.58 : 0.82)
+          }
+          if (progress >= podiumStart && !finalChordPlayed) {
+            finalChordPlayed = true
+            const at = audioContext.currentTime + 0.05
+            ;[523.25, 659.25, 783.99, 1046.5].forEach((hz, i) => playTone(hz, at + i * 0.12, 1.15, 'triangle', 0.17))
+            playTone(130.81, at, 1.3, 'sine', 0.22)
+          }
+          drawFrame(progress)
           const percent = Math.floor(progress * 100)
           if (percent !== lastReported) {
             lastReported = percent
             setTimelineProgress(percent)
           }
-          if (finalFrame) resolve()
+          if (progress >= 1) resolve()
           else requestAnimationFrame(render)
         }
         requestAnimationFrame(render)
       })
-
+      await new Promise(resolve => setTimeout(resolve, 1200))
       recorder.stop()
       await streamPromise
       stream.getTracks().forEach(track => track.stop())
+      audioDestination.stream.getTracks().forEach(track => track.stop())
+      await audioContext.close()
+      audioContext = null
+
       const blob = new Blob(chunks, { type: mimeType })
       if (!blob.size) throw new Error('The video file was empty. Please try again.')
       const videoUrl = URL.createObjectURL(blob)
       setTimelineVideoUrl(videoUrl)
       const link = document.createElement('a')
       link.href = videoUrl
-      link.download = 'M1T1-TalentVote-Timeline.webm'
+      link.download = 'M1T1-TalentVote-Thriller-Timeline.webm'
       document.body.appendChild(link)
       link.click()
       link.remove()
-      notify('Timeline video generated. The WebM file is ready to save or share.')
+      notify('Thriller timeline generated with suspense audio and final Top 3 podium.')
     } catch (error) {
+      if (recorder && recorder.state !== 'inactive') recorder.stop()
+      if (stream) stream.getTracks().forEach(track => track.stop())
+      if (audioContext && audioContext.state !== 'closed') await audioContext.close()
       notify(error.message || 'Could not generate the timeline video.')
     } finally {
       setTimelineBusy(false)
     }
   }
-
   async function deleteCompetition() {
     if (!selected || !competition) return
     const confirmed = window.confirm(
