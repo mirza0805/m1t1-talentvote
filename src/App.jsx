@@ -19,6 +19,7 @@ function getDisplayImageUrl(rawUrl) {
     const url = new URL(rawUrl.trim())
     if (!['http:', 'https:'].includes(url.protocol)) return ''
     const host = url.hostname.toLowerCase()
+    if (host.endsWith('.supabase.co') && url.pathname.startsWith('/storage/v1/object/public/')) return url.toString()
 
     // Convert common share links into image-friendly URLs.
     if (host === 'drive.google.com' || host === 'docs.google.com') {
@@ -70,6 +71,8 @@ export default function App() {
   const [imagePreviewError, setImagePreviewError] = useState(false)
   const [newParticipant, setNewParticipant] = useState('')
   const [imageUrl, setImageUrl] = useState('')
+  const [participantImageFile, setParticipantImageFile] = useState(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [voteReceipt, setVoteReceipt] = useState(false)
@@ -165,6 +168,17 @@ export default function App() {
       window.clearInterval(dataTimer)
     }
   }, [loadData, loadCompetitions, tab, isAdmin])
+
+
+  useEffect(() => {
+    if (!participantImageFile) {
+      setImagePreviewUrl('')
+      return
+    }
+    const preview = URL.createObjectURL(participantImageFile)
+    setImagePreviewUrl(preview)
+    return () => URL.revokeObjectURL(preview)
+  }, [participantImageFile])
 
   useEffect(() => {
     setEditedCompetitionName(competition?.name || '')
@@ -298,17 +312,53 @@ export default function App() {
   async function addParticipant(e) {
     e.preventDefault()
     if (!newParticipant.trim() || !selected) return
-    if (imageUrl.trim() && imagePreviewError) return notify('Please use a valid, publicly accessible image URL before adding this participant.')
+    if (participantImageFile) {
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+      if (!allowedTypes.includes(participantImageFile.type)) return notify('Please choose a JPG, PNG or WEBP image.')
+      if (participantImageFile.size > 5 * 1024 * 1024) return notify('Image must be 5 MB or smaller.')
+    }
+    if (!participantImageFile && imageUrl.trim() && imagePreviewError) {
+      return notify('Please use a valid, publicly accessible image URL before adding this participant.')
+    }
+
+    setLoading(true)
+    let finalImageUrl = imageUrl.trim() || null
+    let uploadedPath = null
+    if (participantImageFile) {
+      const extension = participantImageFile.type === 'image/jpeg' ? 'jpg' : participantImageFile.type === 'image/png' ? 'png' : 'webp'
+      uploadedPath = `${selected}/${crypto.randomUUID()}.${extension}`
+      const { error: uploadError } = await supabase.storage
+        .from('participant-images')
+        .upload(uploadedPath, participantImageFile, {
+          cacheControl: '3600',
+          contentType: participantImageFile.type,
+          upsert: false
+        })
+      if (uploadError) {
+        setLoading(false)
+        return notify('Image upload failed: ' + uploadError.message)
+      }
+      const { data: publicData } = supabase.storage.from('participant-images').getPublicUrl(uploadedPath)
+      finalImageUrl = publicData.publicUrl
+    }
+
     const { error } = await supabase.from('participants').insert({
       competition_id: selected,
       name: newParticipant.trim(),
-      image_url: imageUrl.trim() || null
+      image_url: finalImageUrl
     })
-    if (error) return notify(error.message)
+    if (error) {
+      if (uploadedPath) await supabase.storage.from('participant-images').remove([uploadedPath])
+      setLoading(false)
+      return notify('Could not add participant: ' + error.message)
+    }
     setNewParticipant('')
     setImageUrl('')
+    setParticipantImageFile(null)
+    setImagePreviewError(false)
+    setLoading(false)
     await loadData()
-    notify('Participant added')
+    notify('Participant and image added successfully')
   }
 
   async function changeStatus(status) {
@@ -373,7 +423,7 @@ export default function App() {
     <div className="app">
       <header>
         <div className="brand">
-          <div className="logo"><img src="/talentvote-logo.png" alt="M1T1 TalentVote logo" /></div>
+          <div className="logo"><img src="/talentvote-logo.svg" alt="M1T1 TalentVote trophy logo" /></div>
           <div><h1>M1T1 <span>TalentVote</span></h1><p>THE STAGE IS YOURS</p></div>
         </div>
         <span className="live">● ONLINE</span>
@@ -549,17 +599,21 @@ export default function App() {
                     <form onSubmit={addParticipant}>
                       <input placeholder="Participant name" value={newParticipant}
                         onChange={e => setNewParticipant(e.target.value)} required />
-                      <input type="url" placeholder="Image URL (optional)" value={imageUrl}
-                        onChange={e => { setImageUrl(e.target.value); setImagePreviewError(false) }} />
-                      {imageUrl.trim() && !imagePreviewError && (
+                      <label htmlFor="participant-image-file">UPLOAD PARTICIPANT PHOTO</label>
+                      <input id="participant-image-file" type="file" accept="image/jpeg,image/png,image/webp"
+                        onChange={e => { setParticipantImageFile(e.target.files?.[0] || null); setImageUrl(''); setImagePreviewError(false) }} />
+                      <small className="upload-hint">Choose JPG, PNG or WEBP. Maximum 5 MB. You can upload directly from your phone gallery.</small>
+                      {!participantImageFile && <input type="url" placeholder="Or paste a public image URL (optional)" value={imageUrl}
+                        onChange={e => { setImageUrl(e.target.value); setImagePreviewError(false) }} />}
+                      {(imagePreviewUrl || (imageUrl.trim() && !imagePreviewError)) && (
                         <div className="image-preview">
-                          <img src={getDisplayImageUrl(imageUrl)} alt="Participant image preview"
+                          <img src={imagePreviewUrl || getDisplayImageUrl(imageUrl)} alt="Participant image preview"
                             onError={() => setImagePreviewError(true)} />
                           <small>IMAGE PREVIEW — this is how voters will see the photo</small>
                         </div>
                       )}
-                      {imagePreviewError && <p className="image-error">Image could not be loaded. Make sure the link is public and points to an image.</p>}
-                      <button className="primary form-button"><Plus size={14} /> ADD PARTICIPANT</button>
+                      {imagePreviewError && <p className="image-error">Image could not be loaded. Please choose another image or check the public URL.</p>}
+                      <button className="primary form-button" disabled={loading}><Plus size={14} /> {loading ? 'UPLOADING...' : 'ADD PARTICIPANT'}</button>
                     </form>
                   </>
                 )}
