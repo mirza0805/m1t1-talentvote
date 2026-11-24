@@ -782,47 +782,147 @@ export default function App() {
       }
       const drawPodium = (ordered, progress) => {
         drawAudience(progress)
+        const rise = Math.min(1, Math.max(0, (progress - podiumStart) / 0.07))
+        const shimmer = 0.5 + 0.5 * Math.sin(progress * 38)
+        // A cinematic grand-stage backdrop with layered gold and blue lighting.
+        const stageGlow = ctx.createRadialGradient(640, 320, 25, 640, 320, 610)
+        stageGlow.addColorStop(0, 'rgba(255,205,105,.24)')
+        stageGlow.addColorStop(.42, 'rgba(112,91,255,.16)')
+        stageGlow.addColorStop(1, 'rgba(5,8,30,0)')
+        ctx.fillStyle = stageGlow
+        ctx.fillRect(0, 0, 1280, 720)
+        ctx.save()
+        ctx.strokeStyle = 'rgba(255,220,150,.32)'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(90, 205); ctx.lineTo(1190, 205)
+        ctx.stroke()
+        ctx.strokeStyle = 'rgba(106,222,255,.25)'
+        ctx.beginPath()
+        ctx.moveTo(130, 500); ctx.lineTo(1150, 500)
+        ctx.stroke()
+        ctx.restore()
+
         ctx.textAlign = 'center'
-        ctx.fillStyle = '#ffe6a1'
-        ctx.font = '800 18px Arial'
-        ctx.fillText('THE MOMENT WE HAVE BEEN WAITING FOR', 640, 92)
+        ctx.fillStyle = '#ffe5a3'
+        ctx.font = '800 15px Arial'
+        ctx.letterSpacing = '4px'
+        ctx.fillText('THE GRAND FINALE  •  M1T1 TALENTVOTE', 640, 68)
         ctx.fillStyle = '#ffffff'
-        ctx.font = '900 52px Arial'
-        ctx.fillText('FINAL TOP 3', 640, 150)
-        ctx.fillStyle = '#c9c6f2'
-        ctx.font = '500 19px Arial'
-        ctx.fillText(competition.name, 640, 184)
+        ctx.font = '900 47px Arial'
+        ctx.shadowColor = 'rgba(255,211,115,.55)'
+        ctx.shadowBlur = 22
+        ctx.fillText('THE WINNERS', 640, 126)
+        ctx.shadowBlur = 0
+        ctx.fillStyle = '#d9dcff'
+        ctx.font = '500 17px Arial'
+        ctx.fillText(competition.name, 640, 158)
+
         const top = ordered.slice(0, 3)
         const positions = [
-          { x: 640, y: 295, base: 435, height: 170, color: '#ffd65a', place: '1ST' },
-          { x: 355, y: 350, base: 485, height: 120, color: '#c7d5ed', place: '2ND' },
-          { x: 925, y: 370, base: 515, height: 90, color: '#d99562', place: '3RD' }
+          { x: 640, avatarY: 265, base: 355, height: 125, color: '#ffd65a', dark: '#8e5a18', place: '1ST', medal: 'CHAMPION' },
+          { x: 355, avatarY: 300, base: 395, height: 85, color: '#d8e3f5', dark: '#536783', place: '2ND', medal: 'RUNNER-UP' },
+          { x: 925, avatarY: 310, base: 410, height: 70, color: '#df9b6b', dark: '#79452d', place: '3RD', medal: 'THIRD PLACE' }
         ]
         positions.forEach((pos, index) => {
           const person = top[index]
           if (!person) return
-          const rise = Math.min(1, Math.max(0, (progress - podiumStart) / 0.07))
-          const y = pos.y + (1 - rise) * 65
-          drawAvatar(person, pos.x, y, 58, pos.color)
+          const lift = (1 - rise) * 46
+          const y = pos.avatarY + lift
+          // Glowing halo and a small crown motif for the champion.
+          ctx.save()
+          ctx.beginPath()
+          ctx.arc(pos.x, y, 67 + shimmer * 5, 0, Math.PI * 2)
+          ctx.strokeStyle = pos.color
+          ctx.globalAlpha = .42 + shimmer * .25
+          ctx.lineWidth = 3
+          ctx.shadowColor = pos.color
+          ctx.shadowBlur = 24
+          ctx.stroke()
+          ctx.restore()
+          drawAvatar(person, pos.x, y, 49, pos.color)
+          if (index === 0) {
+            ctx.save()
+            ctx.translate(pos.x, y - 78)
+            ctx.fillStyle = '#ffd65a'
+            ctx.shadowColor = '#ffd65a'
+            ctx.shadowBlur = 18
+            ctx.beginPath()
+            ctx.moveTo(-25, 8); ctx.lineTo(-19, -13); ctx.lineTo(-7, -2)
+            ctx.lineTo(0, -20); ctx.lineTo(8, -2); ctx.lineTo(20, -13)
+            ctx.lineTo(26, 8); ctx.closePath(); ctx.fill()
+            ctx.fillRect(-25, 10, 51, 6)
+            ctx.restore()
+          }
           ctx.fillStyle = '#ffffff'
-          ctx.font = '800 22px Arial'
-          ctx.fillText(person.name.slice(0, 18), pos.x, y + 87)
-          ctx.fillStyle = '#dcd8ff'
-          ctx.font = '700 18px Arial'
-          ctx.fillText(person.votes.toLocaleString() + ' VOTES', pos.x, y + 113)
-          const baseY = pos.base + (1 - rise) * 65
-          const grad = ctx.createLinearGradient(pos.x - 110, baseY, pos.x + 110, baseY + pos.height)
+          ctx.font = index === 0 ? '900 21px Arial' : '800 18px Arial'
+          ctx.shadowColor = 'rgba(0,0,0,.8)'
+          ctx.shadowBlur = 8
+          ctx.fillText(person.name.slice(0, 19), pos.x, y + 75)
+          ctx.shadowBlur = 0
+          ctx.fillStyle = pos.color
+          ctx.font = '800 12px Arial'
+          ctx.fillText(pos.medal, pos.x, y + 94)
+          ctx.fillStyle = '#ffffff'
+          ctx.font = '900 18px Arial'
+          ctx.fillText(person.votes.toLocaleString() + ' VOTES', pos.x, y + 116)
+          const baseY = pos.base + lift
+          const grad = ctx.createLinearGradient(pos.x - 108, baseY, pos.x + 108, baseY + pos.height)
           grad.addColorStop(0, pos.color)
-          grad.addColorStop(1, index === 0 ? '#a86bff' : '#423b70')
-          roundedRect(pos.x - 112, baseY, 224, pos.height, 18, grad)
-          ctx.fillStyle = '#10102d'
-          ctx.font = '900 36px Arial'
-          ctx.fillText(pos.place, pos.x, baseY + 53)
+          grad.addColorStop(1, pos.dark)
+          ctx.save()
+          ctx.shadowColor = pos.color
+          ctx.shadowBlur = index === 0 ? 25 : 13
+          roundedRect(pos.x - 106, baseY, 212, pos.height, 15, grad)
+          ctx.restore()
+          ctx.strokeStyle = 'rgba(255,255,255,.58)'
+          ctx.lineWidth = 1
+          ctx.strokeRect(pos.x - 92, baseY + 12, 184, pos.height - 24)
+          ctx.fillStyle = '#15172c'
+          ctx.font = '900 29px Arial'
+          ctx.fillText(pos.place, pos.x, baseY + 49)
         })
+
+        // Every remaining participant gets a photo card in the final frame, not just the podium.
+        const remaining = ordered.slice(3)
+        if (remaining.length) {
+          const columns = Math.min(7, Math.max(1, Math.ceil(Math.sqrt(remaining.length * 1.7))))
+          const rows = Math.ceil(remaining.length / columns)
+          const cardAreaTop = 535
+          const cardAreaHeight = 118
+          const rowHeight = Math.min(39, cardAreaHeight / rows)
+          const cardWidth = 1160 / columns
+          remaining.forEach((person, index) => {
+            const col = index % columns
+            const row = Math.floor(index / columns)
+            const x = 60 + col * cardWidth + cardWidth / 2
+            const y = cardAreaTop + row * rowHeight + rowHeight / 2
+            const cardH = Math.max(27, rowHeight - 5)
+            roundedRect(x - cardWidth / 2 + 3, y - cardH / 2, cardWidth - 6, cardH, 9, 'rgba(12,18,48,.88)')
+            ctx.strokeStyle = 'rgba(180,190,255,.35)'
+            ctx.lineWidth = 1
+            ctx.strokeRect(x - cardWidth / 2 + 3, y - cardH / 2, cardWidth - 6, cardH)
+            const avatarRadius = Math.max(10, Math.min(15, rowHeight * .34))
+            drawAvatar(person, x - cardWidth * .36, y, avatarRadius, '#9b8bff')
+            ctx.textAlign = 'left'
+            ctx.fillStyle = '#ffffff'
+            ctx.font = '700 ' + (columns >= 6 ? '10' : '12') + 'px Arial'
+            ctx.fillText((index + 4) + '. ' + person.name.slice(0, columns >= 6 ? 12 : 17), x - cardWidth * .23, y - 2)
+            ctx.fillStyle = '#bfcaff'
+            ctx.font = '700 10px Arial'
+            ctx.fillText(person.votes.toLocaleString() + ' votes', x - cardWidth * .23, y + 12)
+          })
+        }
+
         ctx.textAlign = 'left'
         ctx.fillStyle = '#ffffff'
-        ctx.font = '700 17px Arial'
-        ctx.fillText('TOTAL VOTES  •  ' + Object.values(counts).reduce((sum, value) => sum + value, 0).toLocaleString(), 72, 675)
+        ctx.font = '800 13px Arial'
+        ctx.fillText('VERIFIED TOTAL  •  ' + Object.values(counts).reduce((sum, value) => sum + value, 0).toLocaleString() + ' VOTES', 72, 690)
+        ctx.textAlign = 'right'
+        ctx.fillStyle = '#ffe5a3'
+        ctx.font = '700 11px Arial'
+        ctx.fillText('ALL PARTICIPANTS FEATURED', 1208, 690)
+        ctx.textAlign = 'left'
       }
       const drawTransition = (ordered, progress, total) => {
         const t = Math.max(0, Math.min(1, (progress - transitionStart) / (podiumStart - transitionStart)))
@@ -921,15 +1021,10 @@ export default function App() {
           const y = rowTop + index * rowGap
           const isTopThree = index < 3
           const ring = index === 0 ? '#ffd65a' : index === 1 ? '#c7d5ed' : index === 2 ? '#d99562' : '#8b68ff'
-          if (isTopThree) drawAvatar(person, 112, y - 4, 25, ring)
-          else {
-            ctx.fillStyle = '#d5d1f5'
-            ctx.font = '700 17px Arial'
-            ctx.fillText((index + 1) + '.', 82, y + 5)
-          }
+          drawAvatar(person, 112, y - 4, isTopThree ? 23 : 18, ring)
           ctx.fillStyle = isTopThree ? '#ffffff' : '#d5d1f5'
           ctx.font = isTopThree ? '800 20px Arial' : '600 17px Arial'
-          ctx.fillText((index + 1) + '. ' + person.name.slice(0, 22), isTopThree ? 160 : 115, y + 5)
+          ctx.fillText((index + 1) + '. ' + person.name.slice(0, 22), 160, y + 5)
           ctx.textAlign = 'right'
           ctx.fillStyle = '#ffffff'
           ctx.font = '800 20px Arial'
