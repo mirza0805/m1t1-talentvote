@@ -492,7 +492,7 @@ export default function App() {
       const replayEvents = []
       groupedEvents.forEach((personEvents, participantId) => {
         personEvents.sort((a, b) => new Date(a.voted_at).getTime() - new Date(b.voted_at).getTime())
-        const exponent = participantId === championId ? 2.35 : 0.78
+        const exponent = participantId === championId ? 0.42 : 1.25
         personEvents.forEach((event, index) => {
           event._replayAt = Math.pow((index + 1) / personEvents.length, exponent)
           replayEvents.push(event)
