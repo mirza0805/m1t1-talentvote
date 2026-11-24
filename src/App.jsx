@@ -996,9 +996,6 @@ export default function App() {
         ctx.fillStyle = '#ffffff'
         ctx.font = '900 43px Arial'
         ctx.fillText(progress < 0.08 ? 'THE VOTE IS ON' : progress > 0.70 ? 'THE COMEBACK IS ON!' : 'LIVE VOTE TIMELINE', 72, 119)
-        ctx.fillStyle = '#ff9bd5'
-        ctx.font = '800 14px Arial'
-        ctx.fillText('CINEMATIC COMEBACK REPLAY  •  DISPLAY ORDER IS DRAMATIZED', 74, 177)
         ctx.fillStyle = '#c9c6f2'
         ctx.font = '500 19px Arial'
         ctx.fillText(competition.name, 74, 154)
@@ -1009,10 +1006,6 @@ export default function App() {
           ctx.fillStyle = '#ff83bb'
           ctx.font = '900 22px Arial'
           ctx.fillText('⚡ THE TOP 3 ARE NECK AND NECK!', 74, 190)
-        } else if (progress > 0.72) {
-          ctx.fillStyle = '#ffe6a1'
-          ctx.font = '800 19px Arial'
-          ctx.fillText('THE FINAL COUNTDOWN', 74, 190)
         }
         const maxVotes = Math.max(1, ...ordered.map(p => p.votes))
         const rowTop = 235
