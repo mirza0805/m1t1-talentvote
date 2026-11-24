@@ -80,6 +80,10 @@ export default function App() {
   const [enlargedPhoto, setEnlargedPhoto] = useState(null)
   const [showMuslimPrompt, setShowMuslimPrompt] = useState(false)
   const [muslimPromptSeen, setMuslimPromptSeen] = useState(false)
+  const [timelineDuration, setTimelineDuration] = useState(60)
+  const [timelineBusy, setTimelineBusy] = useState(false)
+  const [timelineProgress, setTimelineProgress] = useState(0)
+  const [timelineVideoUrl, setTimelineVideoUrl] = useState('')
 
   const competition = competitions.find(c => c.id === selected)
   const totalVotes = Object.values(totals).reduce((a, b) => a + b, 0)
@@ -182,6 +186,12 @@ export default function App() {
     setImagePreviewUrl(preview)
     return () => URL.revokeObjectURL(preview)
   }, [participantImageFile])
+
+  useEffect(() => {
+    return () => {
+      if (timelineVideoUrl) URL.revokeObjectURL(timelineVideoUrl)
+    }
+  }, [timelineVideoUrl])
 
   useEffect(() => {
     setEditedCompetitionName(competition?.name || '')
@@ -370,6 +380,190 @@ export default function App() {
     if (error) return notify(error.message)
     await loadCompetitions()
     notify(status === 'open' ? 'Voting is now OPEN' : 'Voting is now CLOSED')
+  }
+
+  async function generateVoteTimelineVideo() {
+    if (!isAdmin || !competition || competition.status !== 'closed') {
+      return notify('Only the organizer can generate a video after voting has closed.')
+    }
+    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
+      return notify('Video recording is not supported in this browser. Please use an updated Chrome browser.')
+    }
+
+    setTimelineBusy(true)
+    setTimelineProgress(0)
+    try {
+      const { data: events, error } = await supabase.rpc('get_vote_timeline', {
+        p_competition_id: selected
+      })
+      if (error) throw error
+      if (!events?.length) throw new Error('There are no votes to include in this video.')
+
+      const canvas = document.createElement('canvas')
+      canvas.width = 1280
+      canvas.height = 720
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Could not prepare the video canvas.')
+
+      const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+        .find(type => MediaRecorder.isTypeSupported(type))
+      if (!mimeType) throw new Error('This browser cannot encode a WebM video. Try the latest Chrome.')
+
+      const stream = canvas.captureStream(30)
+      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4200000 })
+      const chunks = []
+      const people = participants.map(p => ({ id: p.id, name: p.name }))
+      const firstTime = new Date(events[0].voted_at).getTime()
+      const lastTime = new Date(events[events.length - 1].voted_at).getTime()
+      const timeSpan = Math.max(1, lastTime - firstTime)
+      const durationMs = Math.max(5, Number(timelineDuration)) * 1000
+
+      const drawFrame = (progress, counts, finalFrame) => {
+        const w = canvas.width, h = canvas.height
+        const bg = ctx.createLinearGradient(0, 0, w, h)
+        bg.addColorStop(0, '#09091f')
+        bg.addColorStop(.55, '#171044')
+        bg.addColorStop(1, '#071d43')
+        ctx.fillStyle = bg
+        ctx.fillRect(0, 0, w, h)
+
+        for (let i = 0; i < 34; i++) {
+          const x = (i * 197 + 73) % w
+          const y = (i * 113 + 41) % h
+          ctx.fillStyle = i % 3 === 0 ? 'rgba(96,220,255,.42)' : 'rgba(210,155,255,.28)'
+          ctx.beginPath()
+          ctx.arc(x, y, i % 4 === 0 ? 2 : 1, 0, Math.PI * 2)
+          ctx.fill()
+        }
+
+        const glow = ctx.createRadialGradient(1080, 100, 10, 1080, 100, 440)
+        glow.addColorStop(0, 'rgba(0,220,255,.16)')
+        glow.addColorStop(1, 'rgba(0,220,255,0)')
+        ctx.fillStyle = glow
+        ctx.fillRect(600, 0, 680, 480)
+
+        ctx.fillStyle = '#73eaff'
+        ctx.font = '800 19px Arial'
+        ctx.fillText('M1T1  •  TALENTVOTE', 72, 66)
+        ctx.fillStyle = '#ffffff'
+        ctx.font = '800 43px Arial'
+        ctx.fillText(finalFrame ? 'FINAL RESULTS' : 'LIVE VOTE TIMELINE', 72, 125)
+        ctx.fillStyle = '#c9c6f2'
+        ctx.font = '500 19px Arial'
+        ctx.fillText(competition.name, 74, 160)
+
+        const ordered = people.map(person => ({ ...person, votes: counts[person.id] || 0 }))
+          .sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name))
+        const maxVotes = Math.max(1, ...ordered.map(p => p.votes))
+        const rowTop = 208
+        const rowGap = Math.min(66, 430 / Math.max(1, ordered.length))
+        const barMax = 650
+
+        ordered.forEach((person, index) => {
+          const y = rowTop + index * rowGap
+          const barY = y + 10
+          const barWidth = Math.max(4, (person.votes / maxVotes) * barMax)
+          ctx.fillStyle = index === 0 && person.votes > 0 ? '#ffe08a' : '#f1efff'
+          ctx.font = '700 19px Arial'
+          ctx.fillText((index + 1) + '. ' + person.name.slice(0, 27), 76, y)
+          ctx.textAlign = 'right'
+          ctx.fillStyle = '#ffffff'
+          ctx.font = '800 20px Arial'
+          ctx.fillText(String(person.votes), 1160, y)
+          ctx.textAlign = 'left'
+          const track = ctx.createLinearGradient(0, 0, barMax, 0)
+          track.addColorStop(0, index === 0 ? '#ffcf56' : '#8b68ff')
+          track.addColorStop(1, index === 0 ? '#ff7dba' : '#37d9ef')
+          ctx.fillStyle = 'rgba(255,255,255,.10)'
+          ctx.beginPath()
+          ctx.roundRect(390, barY - 15, barMax, 15, 8)
+          ctx.fill()
+          ctx.fillStyle = track
+          ctx.beginPath()
+          ctx.roundRect(390, barY - 15, Math.min(barMax, barWidth), 15, 8)
+          ctx.fill()
+        })
+
+        const total = Object.values(counts).reduce((sum, value) => sum + value, 0)
+        ctx.fillStyle = '#c9c6f2'
+        ctx.font = '600 17px Arial'
+        ctx.fillText('TOTAL VOTES', 76, 650)
+        ctx.fillStyle = '#ffffff'
+        ctx.font = '800 32px Arial'
+        ctx.fillText(String(total), 76, 688)
+
+        ctx.fillStyle = 'rgba(255,255,255,.17)'
+        ctx.fillRect(390, 656, 650, 8)
+        const progressGradient = ctx.createLinearGradient(390, 0, 1040, 0)
+        progressGradient.addColorStop(0, '#a879ff')
+        progressGradient.addColorStop(1, '#46e7f2')
+        ctx.fillStyle = progressGradient
+        ctx.fillRect(390, 656, 650 * progress, 8)
+        ctx.fillStyle = '#b9b5e7'
+        ctx.font = '600 14px Arial'
+        ctx.textAlign = 'right'
+        ctx.fillText(finalFrame ? 'OFFICIAL FINAL COUNT' : 'VOTES ACCUMULATING', 1160, 688)
+        ctx.textAlign = 'left'
+      }
+
+      const counts = {}
+      const streamPromise = new Promise((resolve, reject) => {
+        recorder.ondataavailable = event => {
+          if (event.data && event.data.size) chunks.push(event.data)
+        }
+        recorder.onerror = () => reject(new Error('The browser could not record the video.'))
+        recorder.onstop = () => resolve()
+      })
+
+      drawFrame(0, counts, false)
+      recorder.start(1000)
+      const startedAt = performance.now()
+      let lastReported = -1
+
+      await new Promise((resolve) => {
+        const render = (now) => {
+          const elapsed = Math.min(durationMs, now - startedAt)
+          const progress = Math.min(1, elapsed / durationMs)
+          const eventCutoff = firstTime + timeSpan * progress
+          for (const event of events) {
+            const eventTime = new Date(event.voted_at).getTime()
+            if (eventTime <= eventCutoff && !event._counted) {
+              counts[event.participant_id] = (counts[event.participant_id] || 0) + 1
+              event._counted = true
+            }
+          }
+          const finalFrame = progress >= 1
+          drawFrame(progress, counts, finalFrame)
+          const percent = Math.floor(progress * 100)
+          if (percent !== lastReported) {
+            lastReported = percent
+            setTimelineProgress(percent)
+          }
+          if (finalFrame) resolve()
+          else requestAnimationFrame(render)
+        }
+        requestAnimationFrame(render)
+      })
+
+      recorder.stop()
+      await streamPromise
+      stream.getTracks().forEach(track => track.stop())
+      const blob = new Blob(chunks, { type: mimeType })
+      if (!blob.size) throw new Error('The video file was empty. Please try again.')
+      const videoUrl = URL.createObjectURL(blob)
+      setTimelineVideoUrl(videoUrl)
+      const link = document.createElement('a')
+      link.href = videoUrl
+      link.download = 'M1T1-TalentVote-Timeline.webm'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      notify('Timeline video generated. The WebM file is ready to save or share.')
+    } catch (error) {
+      notify(error.message || 'Could not generate the timeline video.')
+    } finally {
+      setTimelineBusy(false)
+    }
   }
 
   async function deleteCompetition() {
@@ -771,6 +965,33 @@ export default function App() {
                 </div>
               ))}
             <button className="primary" onClick={loadData}><RefreshCw size={14} /> REFRESH</button>
+            {isAdmin && competition?.status === 'closed' && (
+              <div className="timeline-export">
+                <h3>Vote Timeline Video</h3>
+                <p>Create a moving graph that shows how each participant's votes accumulated over time. The video ends with the official final results.</p>
+                <label htmlFor="timeline-duration">VIDEO DURATION</label>
+                <select id="timeline-duration" value={timelineDuration}
+                  onChange={e => setTimelineDuration(Number(e.target.value))} disabled={timelineBusy}>
+                  <option value="30">30 seconds</option>
+                  <option value="60">1 minute</option>
+                  <option value="90">1 minute 30 seconds</option>
+                  <option value="120">2 minutes</option>
+                  <option value="180">3 minutes (maximum)</option>
+                </select>
+                <button className="primary form-button" onClick={generateVoteTimelineVideo} disabled={timelineBusy}>
+                  {timelineBusy ? 'GENERATING VIDEO ' + timelineProgress + '%' : 'GENERATE TIMELINE VIDEO'}
+                </button>
+                {timelineBusy && <div className="timeline-progress"><span style={{ width: timelineProgress + '%' }} /></div>}
+                {timelineVideoUrl && (
+                  <div className="timeline-preview">
+                    <video src={timelineVideoUrl} controls playsInline />
+                    <a href={timelineVideoUrl} download="M1T1-TalentVote-Timeline.webm">DOWNLOAD VIDEO AGAIN</a>
+                    <small>Format: WebM · 16:9 · Up to 3 minutes</small>
+                  </div>
+                )}
+                <small className="upload-hint">Available to the organizer after voting closes. Use an updated Chrome browser to generate and save the video.</small>
+              </div>
+            )}
           </section>
         )}
 
