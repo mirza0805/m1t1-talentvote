@@ -255,3 +255,20 @@ footer span{color:#66edff}
 @media(prefers-reduced-motion:reduce){
   body:before,body:after,.logo,.live,.hero:before{animation:none!important}
 }
+
+
+/* Vote timeline video export */
+.timeline-export{margin-top:28px;padding:20px;border:1px solid #5b4c9d;border-radius:16px;background:linear-gradient(145deg,rgba(44,27,91,.82),rgba(10,34,70,.88));box-shadow:0 12px 35px rgba(0,0,0,.25);position:relative;overflow:hidden}
+.timeline-export:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,#e879ff,#54e8f4,#ffcf56)}
+.timeline-export h3{margin:0 0 10px;color:#83efff;font-size:17px;letter-spacing:.3px}
+.timeline-export p{color:#d4d2f3;font-size:12px;line-height:1.7;margin-bottom:14px}
+.timeline-export label{display:block;color:#ffda64;font-size:10px;letter-spacing:1.3px;font-weight:900;margin-top:12px}
+.timeline-export select{margin-top:8px}
+.timeline-export .form-button{width:100%;margin-top:14px;background:linear-gradient(110deg,#a879ff,#47dce9);color:#10102f;box-shadow:0 6px 22px rgba(91,177,255,.2)}
+.timeline-progress{height:8px;border-radius:20px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:14px}
+.timeline-progress span{height:100%;display:block;border-radius:20px;background:linear-gradient(90deg,#a879ff,#47dce9);transition:width .25s ease;box-shadow:0 0 16px #47dce9}
+.timeline-preview{display:grid;gap:10px;margin-top:18px}
+.timeline-preview video{width:100%;max-height:420px;background:#050512;border:1px solid #6557a8;border-radius:12px}
+.timeline-preview a{color:#83efff;font-size:11px;font-weight:900;letter-spacing:.8px;text-decoration:none}
+.timeline-preview a:hover{text-decoration:underline}
+.timeline-preview small{color:#aaa8d4;font-size:10px}
