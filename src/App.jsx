@@ -73,6 +73,11 @@ export default function App() {
   const [imageUrl, setImageUrl] = useState('')
   const [participantImageFile, setParticipantImageFile] = useState(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState('')
+  const [editingParticipantId, setEditingParticipantId] = useState(null)
+  const [editingParticipantName, setEditingParticipantName] = useState('')
+  const [editingParticipantImageFile, setEditingParticipantImageFile] = useState(null)
+  const [editingParticipantImageUrl, setEditingParticipantImageUrl] = useState('')
+  const [editingParticipantRemoveImage, setEditingParticipantRemoveImage] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [voteReceipt, setVoteReceipt] = useState(false)
@@ -376,6 +381,92 @@ export default function App() {
     setLoading(false)
     await loadData()
     notify('Participant and image added successfully')
+  }
+
+  function startEditingParticipant(person) {
+    setEditingParticipantId(person.id)
+    setEditingParticipantName(person.name || '')
+    setEditingParticipantImageFile(null)
+    setEditingParticipantImageUrl('')
+    setEditingParticipantRemoveImage(false)
+  }
+
+  function cancelEditingParticipant() {
+    setEditingParticipantId(null)
+    setEditingParticipantName('')
+    setEditingParticipantImageFile(null)
+    setEditingParticipantImageUrl('')
+    setEditingParticipantRemoveImage(false)
+  }
+
+  async function saveParticipantChanges(e, person) {
+    e.preventDefault()
+    if (!isAdmin || !person?.id || !editingParticipantName.trim()) {
+      return notify('Please enter the participant name.')
+    }
+    const file = editingParticipantImageFile
+    if (file) {
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        return notify('Please choose a JPG, PNG or WEBP image.')
+      }
+      if (file.size > 5 * 1024 * 1024) return notify('Image must be 5 MB or smaller.')
+    }
+
+    setLoading(true)
+    let nextImageUrl = person.image_url || null
+    let uploadedPath = null
+    if (file) {
+      const extension = file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/png' ? 'png' : 'webp'
+      uploadedPath = `${selected}/${crypto.randomUUID()}.${extension}`
+      const { error: uploadError } = await supabase.storage
+        .from('participant-images')
+        .upload(uploadedPath, file, {
+          cacheControl: '3600',
+          contentType: file.type,
+          upsert: false
+        })
+      if (uploadError) {
+        setLoading(false)
+        return notify('Image upload failed: ' + uploadError.message)
+      }
+      nextImageUrl = supabase.storage.from('participant-images').getPublicUrl(uploadedPath).data.publicUrl
+    } else if (editingParticipantImageUrl.trim()) {
+      nextImageUrl = editingParticipantImageUrl.trim()
+    } else if (editingParticipantRemoveImage) {
+      nextImageUrl = null
+    }
+
+    const { error } = await supabase.from('participants')
+      .update({ name: editingParticipantName.trim(), image_url: nextImageUrl })
+      .eq('id', person.id)
+      .eq('competition_id', selected)
+    if (error) {
+      if (uploadedPath) await supabase.storage.from('participant-images').remove([uploadedPath])
+      setLoading(false)
+      return notify('Could not update participant: ' + error.message)
+    }
+
+    cancelEditingParticipant()
+    setLoading(false)
+    await loadData()
+    notify('Participant details updated successfully.')
+  }
+
+  async function removeParticipant(person) {
+    if (!isAdmin || !person?.id) return
+    const confirmed = window.confirm(
+      `Remove "${person.name}" from this competition? Participants with recorded votes cannot be removed, to protect the results.`
+    )
+    if (!confirmed) return
+    setLoading(true)
+    const { error } = await supabase.rpc('admin_delete_participant', {
+      p_participant_id: person.id
+    })
+    setLoading(false)
+    if (error) return notify(error.message)
+    if (editingParticipantId === person.id) cancelEditingParticipant()
+    await loadData()
+    notify('Participant removed.')
   }
 
   async function changeStatus(status) {
@@ -1308,9 +1399,46 @@ export default function App() {
                     {participants.length === 0 && <p>No participants added yet.</p>}
                     <div className="admin-participants">
                       {participants.map((p, i) => (
-                        <div className="admin-person" key={p.id}>
+                        <div className="admin-person participant-admin-card" key={p.id}>
                           {p.image_url ? <img src={getDisplayImageUrl(p.image_url)} alt="" /> : <div className="avatar">{p.name.charAt(0).toUpperCase()}</div>}
-                          <div><strong>#{i + 1} {p.name}</strong><small>{p.image_url ? 'Image added' : 'No image'}</small></div>
+                          <div className="participant-admin-info">
+                            <strong>#{i + 1} {p.name}</strong>
+                            <small>{p.image_url ? 'Image added' : 'No image'}</small>
+                            <div className="participant-admin-actions">
+                              <button type="button" className="secondary" onClick={() => editingParticipantId === p.id ? cancelEditingParticipant() : startEditingParticipant(p)}>
+                                <Pencil size={13} /> {editingParticipantId === p.id ? 'CANCEL' : 'EDIT'}
+                              </button>
+                              <button type="button" className="danger" disabled={loading} onClick={() => removeParticipant(p)}>
+                                <Trash2 size={13} /> REMOVE
+                              </button>
+                            </div>
+                          </div>
+                          {editingParticipantId === p.id && (
+                            <form className="participant-edit-form" onSubmit={e => saveParticipantChanges(e, p)}>
+                              <label htmlFor={`edit-participant-name-${p.id}`}>PARTICIPANT NAME</label>
+                              <input id={`edit-participant-name-${p.id}`} value={editingParticipantName}
+                                onChange={e => setEditingParticipantName(e.target.value)} required />
+                              <label htmlFor={`edit-participant-file-${p.id}`}>REPLACE PHOTO FROM GALLERY</label>
+                              <input id={`edit-participant-file-${p.id}`} type="file" accept="image/jpeg,image/png,image/webp"
+                                onChange={e => { setEditingParticipantImageFile(e.target.files?.[0] || null); setEditingParticipantImageUrl(''); setEditingParticipantRemoveImage(false) }} />
+                              <small className="upload-hint">JPG, PNG or WEBP, maximum 5 MB. Leave unchanged to keep the current photo.</small>
+                              {!editingParticipantImageFile && (
+                                <input type="url" placeholder="Or enter a new public photo URL"
+                                  value={editingParticipantImageUrl}
+                                  onChange={e => { setEditingParticipantImageUrl(e.target.value); setEditingParticipantRemoveImage(false) }} />
+                              )}
+                              {p.image_url && (
+                                <label className="remove-photo-option">
+                                  <input type="checkbox" checked={editingParticipantRemoveImage}
+                                    onChange={e => { setEditingParticipantRemoveImage(e.target.checked); if (e.target.checked) { setEditingParticipantImageFile(null); setEditingParticipantImageUrl('') } }} />
+                                  Remove current photo
+                                </label>
+                              )}
+                              <button className="primary form-button" disabled={loading}>
+                                <CheckCircle size={13} /> {loading ? 'SAVING...' : 'SAVE CHANGES'}
+                              </button>
+                            </form>
+                          )}
                         </div>
                       ))}
                     </div>
