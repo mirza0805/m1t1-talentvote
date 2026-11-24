@@ -423,15 +423,21 @@ export default function App() {
         img.src = person.image_url
       })))
 
-      // Original suspense soundtrack is synthesized locally and embedded in the WebM.
+      // Original suspense soundtrack is synthesized locally and embedded in the exported video.
       const AudioContextClass = window.AudioContext || window.webkitAudioContext
       if (!AudioContextClass) throw new Error('Audio recording is not supported in this browser.')
       audioContext = new AudioContextClass()
       await audioContext.resume()
+      if (audioContext.state !== 'running') throw new Error('Please allow audio playback in your browser and try again.')
       const master = audioContext.createGain()
       const compressor = audioContext.createDynamicsCompressor()
       const audioDestination = audioContext.createMediaStreamDestination()
-      master.gain.value = 0.22
+      master.gain.value = 0.88
+      compressor.threshold.value = -18
+      compressor.knee.value = 18
+      compressor.ratio.value = 8
+      compressor.attack.value = 0.004
+      compressor.release.value = 0.18
       master.connect(compressor)
       compressor.connect(audioDestination)
       const playTone = (frequency, startAt, duration, type, volume) => {
@@ -452,19 +458,34 @@ export default function App() {
       audioDestination.stream.getAudioTracks().forEach(track => stream.addTrack(track))
       recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5200000 })
       const chunks = []
-      const firstTime = Math.min(...events.map(e => new Date(e.voted_at).getTime()))
-      const lastTime = Math.max(...events.map(e => new Date(e.voted_at).getTime()))
-      const timeSpan = Math.max(1, lastTime - firstTime)
       const durationMs = Math.max(5, Number(timelineDuration)) * 1000
+      const transitionStart = 0.82
       const podiumStart = 0.90
       const counts = {}
       const finalCounts = {}
       events.forEach(event => { finalCounts[event.participant_id] = (finalCounts[event.participant_id] || 0) + 1 })
       const finalOrder = people.map(person => ({ ...person, votes: finalCounts[person.id] || 0 }))
         .sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name))
-      // Cinematic opening: the eventual winner starts at the bottom, then makes a staged climb.
-      // This is explicitly a visual replay; the final podium and vote totals remain official.
-      const comebackStartOrder = [...finalOrder.slice(1).reverse(), ...finalOrder.slice(0, 1)]
+      const championId = finalOrder[0]?.id
+      // Re-stage the reveal order, never the vote records: every real vote appears once.
+      // Non-winners are revealed earlier; the eventual winner's real votes build later,
+      // creating a genuine low-count start and a gradual climb to the verified final total.
+      const groupedEvents = new Map()
+      events.forEach(event => {
+        if (!groupedEvents.has(event.participant_id)) groupedEvents.set(event.participant_id, [])
+        groupedEvents.get(event.participant_id).push(event)
+      })
+      const replayEvents = []
+      groupedEvents.forEach((personEvents, participantId) => {
+        personEvents.sort((a, b) => new Date(a.voted_at).getTime() - new Date(b.voted_at).getTime())
+        const exponent = participantId === championId ? 2.35 : 0.78
+        personEvents.forEach((event, index) => {
+          event._replayAt = Math.pow((index + 1) / personEvents.length, exponent)
+          replayEvents.push(event)
+        })
+      })
+      replayEvents.sort((a, b) => a._replayAt - b._replayAt)
+      let replayIndex = 0
       let nextBeatAt = 0
       let finalChordPlayed = false
 
@@ -524,7 +545,8 @@ export default function App() {
         }
       }
       const getRanking = () => people.map(person => ({ ...person, votes: counts[person.id] || 0 }))
-        .sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name))
+        .sort((a, b) => (b.votes - a.votes) ||
+          (a.id === championId ? 1 : b.id === championId ? -1 : a.name.localeCompare(b.name)))
       const drawPodium = (ordered, progress) => {
         ctx.textAlign = 'center'
         ctx.fillStyle = '#ffe6a1'
@@ -568,23 +590,72 @@ export default function App() {
         ctx.font = '700 17px Arial'
         ctx.fillText('TOTAL VOTES  •  ' + Object.values(counts).reduce((sum, value) => sum + value, 0).toLocaleString(), 72, 675)
       }
+      const drawTransition = (ordered, progress, total) => {
+        const t = Math.max(0, Math.min(1, (progress - transitionStart) / (podiumStart - transitionStart)))
+        const ease = t * t * (3 - 2 * t)
+        ctx.save()
+        ctx.fillStyle = 'rgba(5, 4, 24, ' + (0.20 + ease * 0.48) + ')'
+        ctx.fillRect(0, 0, 1280, 720)
+        const pulse = 1 + Math.sin(t * Math.PI * 10) * 0.06
+        const radius = 80 + ease * 420
+        const cx = 640, cy = 350
+        const burst = ctx.createRadialGradient(cx, cy, 8, cx, cy, radius)
+        burst.addColorStop(0, 'rgba(255,225,150,' + (0.34 * (1 - t * 0.45)) + ')')
+        burst.addColorStop(0.35, 'rgba(160,110,255,' + (0.22 * (1 - t * 0.3)) + ')')
+        burst.addColorStop(1, 'rgba(20,220,255,0)')
+        ctx.fillStyle = burst
+        ctx.fillRect(0, 0, 1280, 720)
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath()
+          ctx.arc(cx, cy, radius * (0.35 + i * 0.18) * pulse, 0, Math.PI * 2)
+          ctx.strokeStyle = 'rgba(120,225,255,' + (0.55 - i * 0.08) * (1 - t * 0.35) + ')'
+          ctx.lineWidth = 3 + (1 - t) * 4
+          ctx.stroke()
+        }
+        ctx.save()
+        ctx.translate(cx, cy)
+        ctx.rotate((1 - t) * 0.20)
+        ctx.scale(1 + ease * 0.22, 1 + ease * 0.22)
+        ctx.textAlign = 'center'
+        ctx.fillStyle = '#ffe7a6'
+        ctx.font = '900 ' + Math.round(30 + ease * 20) + 'px Arial'
+        ctx.shadowColor = '#ffb84d'
+        ctx.shadowBlur = 30
+        ctx.fillText('THE FINAL REVEAL', 0, -35)
+        ctx.shadowBlur = 0
+        ctx.fillStyle = '#ffffff'
+        ctx.font = '900 58px Arial'
+        ctx.fillText('TOP 3', 0, 38)
+        ctx.restore()
+        // Ranking bars sweep into the centre as the stage doors open.
+        const top = ordered.slice(0, 3)
+        top.forEach((person, index) => {
+          const fromX = index === 0 ? 90 : index === 1 ? 640 : 1190
+          const x = fromX + (640 - fromX) * ease
+          const y = 500 + index * 48 + (index - 1) * (1 - ease) * 45
+          ctx.globalAlpha = 1 - ease * 0.65
+          roundedRect(x - 170, y, 340 * (1 - ease * 0.35), 12, 8, index === 0 ? '#ffd65a' : '#8b68ff')
+          ctx.globalAlpha = 1
+        })
+        ctx.fillStyle = '#ffffff'
+        ctx.font = '700 18px Arial'
+        ctx.textAlign = 'center'
+        ctx.fillText(total.toLocaleString() + ' VERIFIED VOTES', 640, 660)
+        ctx.restore()
+      }
       const drawFrame = progress => {
         drawBackground(progress)
         const ordered = getRanking()
         const total = Object.values(counts).reduce((sum, value) => sum + value, 0)
-        const comebackRaw = Math.max(0, Math.min(1, (progress - 0.70) / 0.20))
-        const comebackEase = comebackRaw * comebackRaw * (3 - 2 * comebackRaw)
-        const startSlots = new Map(comebackStartOrder.map((person, index) => [person.id, index]))
-        const finalSlots = new Map(finalOrder.map((person, index) => [person.id, index]))
-        const displayOrdered = [...ordered].sort((a, b) => {
-          const aSlot = (startSlots.get(a.id) ?? 0) * (1 - comebackEase) + (finalSlots.get(a.id) ?? 0) * comebackEase
-          const bSlot = (startSlots.get(b.id) ?? 0) * (1 - comebackEase) + (finalSlots.get(b.id) ?? 0) * comebackEase
-          return aSlot - bSlot
-        })
         if (progress >= podiumStart) {
           drawPodium(ordered, progress)
           return
         }
+        if (progress >= transitionStart) {
+          drawTransition(ordered, progress, total)
+          return
+        }
+        const displayOrdered = ordered
         ctx.fillStyle = '#73eaff'
         ctx.font = '800 19px Arial'
         ctx.fillText('M1T1  •  TALENTVOTE', 72, 62)
@@ -670,13 +741,10 @@ export default function App() {
         const render = now => {
           const elapsed = Math.min(durationMs, now - startedAt)
           const progress = Math.min(1, elapsed / durationMs)
-          const voteProgress = Math.min(1, progress / podiumStart)
-          const eventCutoff = firstTime + timeSpan * voteProgress
-          for (const event of events) {
-            if (!event._counted && new Date(event.voted_at).getTime() <= eventCutoff) {
-              counts[event.participant_id] = (counts[event.participant_id] || 0) + 1
-              event._counted = true
-            }
+          const voteProgress = Math.min(1, progress / transitionStart)
+          while (replayIndex < replayEvents.length && replayEvents[replayIndex]._replayAt <= voteProgress) {
+            const event = replayEvents[replayIndex++]
+            counts[event.participant_id] = (counts[event.participant_id] || 0) + 1
           }
           const ranking = getRanking()
           const gap = ranking.length > 1 ? Math.abs(ranking[0].votes - ranking[1].votes) : 0
@@ -684,17 +752,19 @@ export default function App() {
           const closeRace = total > 0 && gap / Math.max(1, total) < 0.055
           const audioNow = audioContext.currentTime
           if (progress < podiumStart && audioNow >= nextBeatAt) {
-            const comeback = progress > 0.70 && progress < podiumStart
-          const tense = (closeRace && progress > 0.65) || comeback
-          playTone(comeback ? 92 : tense ? 78 : 58, audioNow, 0.22, 'sine', comeback ? 0.38 : tense ? 0.34 : 0.22)
-          if (progress > 0.55) playTone(comeback ? 660 : tense ? 520 : 390, audioNow + 0.035, 0.11, 'triangle', comeback ? 0.11 : 0.07)
-          nextBeatAt = audioNow + (comeback ? 0.24 : tense ? 0.38 : progress > 0.68 ? 0.58 : 0.82)
+            const comeback = progress > 0.70 && progress < transitionStart
+            const tense = (closeRace && progress > 0.55) || comeback
+            // Audible repeating low pulse plus brighter rhythmic hit, mixed at a healthy level.
+            playTone(comeback ? 110 : tense ? 82 : 64, audioNow, 0.34, 'sawtooth', comeback ? 0.32 : tense ? 0.28 : 0.24)
+            playTone(comeback ? 220 : tense ? 164 : 128, audioNow + 0.025, 0.30, 'sine', comeback ? 0.24 : 0.18)
+            playTone(comeback ? 880 : tense ? 660 : 440, audioNow + 0.055, 0.16, 'triangle', comeback ? 0.20 : 0.14)
+            nextBeatAt = audioNow + (comeback ? 0.22 : tense ? 0.34 : 0.62)
           }
-          if (progress >= podiumStart && !finalChordPlayed) {
+          if (progress >= transitionStart && !finalChordPlayed) {
             finalChordPlayed = true
             const at = audioContext.currentTime + 0.05
-            ;[523.25, 659.25, 783.99, 1046.5].forEach((hz, i) => playTone(hz, at + i * 0.12, 1.15, 'triangle', 0.17))
-            playTone(130.81, at, 1.3, 'sine', 0.22)
+            ;[392, 523.25, 659.25, 783.99, 1046.5].forEach((hz, i) => playTone(hz, at + i * 0.16, 1.55, 'triangle', 0.24))
+            playTone(98, at, 1.8, 'sine', 0.30)
           }
           drawFrame(progress)
           const percent = Math.floor(progress * 100)
@@ -717,6 +787,10 @@ export default function App() {
 
       const blob = new Blob(chunks, { type: mimeType })
       if (!blob.size) throw new Error('The video file was empty. Please try again.')
+      const finalDisplayedTotal = Object.values(finalCounts).reduce((sum, value) => sum + value, 0)
+      if (finalDisplayedTotal !== events.length || replayIndex !== events.length) {
+        throw new Error('Vote count verification failed. Please regenerate the video; no results were changed.')
+      }
       const videoUrl = URL.createObjectURL(blob)
       setTimelineVideoUrl(videoUrl)
       const link = document.createElement('a')
