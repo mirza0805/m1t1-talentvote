@@ -651,7 +651,7 @@ export default function App() {
             <h2 id="muslim-prompt-title">Are you a Muslim?</h2>
             <p>We have something useful to share with you.</p>
             <div className="muslim-prompt-actions">
-              <button type="button" className="primary" onClick={() => { setShowMuslimPrompt(false); window.open('https://dhikrmath.base44.app', '_blank', 'noopener,noreferrer') }}>YES</button>
+              <button type="button" className="primary" onClick={() => { setShowMuslimPrompt(false); window.open('https://dhikrmath.pages.dev', '_blank', 'noopener,noreferrer') }}>YES</button>
               <button type="button" className="secondary" onClick={() => setShowMuslimPrompt(false)}>NO</button>
             </div>
           </div>
