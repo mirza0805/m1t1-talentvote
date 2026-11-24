@@ -100,3 +100,13 @@ footer{text-align:center;color:#8582b3;padding:30px 15px;font-size:10px;letter-s
 .photo-lightbox-close{position:absolute;top:18px;right:20px;width:44px;height:44px;border-radius:50%;background:#292052;border:1px solid #9884dc;color:white;font-size:29px;line-height:1}
 @media(max-width:520px){.participant-photo-button{flex-basis:88px;width:88px;height:88px}.participant{gap:11px}.person strong{font-size:13px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+
+/* DhikrMath destination confirmation */
+.dhikrmath-link{font:inherit;cursor:pointer}
+.muslim-prompt{width:min(92vw,390px);padding:28px 24px;text-align:center;border-radius:20px;border:1px solid #8068ce;background:linear-gradient(145deg,#211650,#101b42);box-shadow:0 20px 70px #000b;animation:thankyou-enter .3s ease both}
+.muslim-prompt-icon{width:54px;height:54px;margin:0 auto 14px;display:grid;place-items:center;border-radius:50%;background:#292052;color:#ffdc62;font-size:29px;border:1px solid #8b72d2}
+.muslim-prompt h2{color:#ffdc62;font-size:21px;margin-bottom:9px}
+.muslim-prompt p{color:#d2d5ef;font-size:13px;line-height:1.6}
+.muslim-prompt-actions{display:flex;gap:12px;margin-top:22px}
+.muslim-prompt-actions button{flex:1;min-height:44px}
