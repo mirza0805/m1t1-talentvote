@@ -67,3 +67,36 @@ footer{text-align:center;color:#8582b3;padding:30px 15px;font-size:10px;letter-s
 
 .upload-hint{display:block;margin-top:7px;color:#aaa8d4;font-size:10px;line-height:1.5}
 #participant-image-file{padding:10px;background:#111333;border:1px dashed #7568b0;color:#d9d5ff}
+
+
+/* Voting celebration and interactive contestant cards */
+.thankyou{position:relative;overflow:hidden;animation:thankyou-enter .55s cubic-bezier(.2,.8,.2,1) both;}
+@keyframes thankyou-enter{0%{opacity:0;transform:translateY(18px) scale(.97)}100%{opacity:1;transform:translateY(0) scale(1)}}
+.success-icon{animation:success-pop .65s cubic-bezier(.2,1.5,.5,1) both;}
+@keyframes success-pop{0%{transform:scale(.2) rotate(-35deg)}100%{transform:scale(1) rotate(0)}}
+.celebration-sparkles{position:absolute;inset:0;pointer-events:none;color:#ffdc62;font-size:22px}
+.celebration-sparkles span{position:absolute;animation:sparkle-float 2.4s ease-in-out infinite}
+.celebration-sparkles span:nth-child(1){left:12%;top:20%}.celebration-sparkles span:nth-child(2){right:13%;top:25%;animation-delay:.4s}.celebration-sparkles span:nth-child(3){left:20%;bottom:16%;animation-delay:.8s}.celebration-sparkles span:nth-child(4){right:19%;bottom:17%;animation-delay:1.2s}
+@keyframes sparkle-float{0%,100%{opacity:.35;transform:translateY(4px) scale(.8)}50%{opacity:1;transform:translateY(-8px) scale(1.2)}}
+.vote-again{transition:transform .18s ease,filter .18s ease,box-shadow .18s ease}
+.vote-again:hover{transform:translateY(-3px) scale(1.03);filter:brightness(1.08);box-shadow:0 8px 22px #ffbd2670}
+.vote-again:active{transform:scale(.96)}
+.thankyou .joke{animation:joke-in .28s ease both}
+@keyframes joke-in{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.dhikrmath-link{display:inline-flex;align-items:center;justify-content:center;margin-top:12px;padding:12px 18px;border-radius:10px;background:linear-gradient(110deg,#8e62ff,#5b38bf);border:1px solid #c5adff;color:#fff;text-decoration:none;font-size:12px;font-weight:900;letter-spacing:1px;box-shadow:0 0 20px #9166ff66;animation:link-pulse 1.5s ease-in-out infinite}
+@keyframes link-pulse{0%,100%{box-shadow:0 0 10px #9166ff44;transform:scale(1)}50%{box-shadow:0 0 24px #9166ffbb;transform:scale(1.04)}}
+.participant{transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
+.participant:hover{transform:translateY(-3px);border-color:#8c76dc;box-shadow:0 9px 22px #05051c88}
+.participant-photo-button{position:relative;flex:0 0 104px;width:104px;height:104px;padding:0;border:2px solid #b9a7ff;border-radius:14px;overflow:hidden;background:#100e32}
+.participant-photo-button img{width:100%;height:100%;display:block;object-fit:cover;border:0;border-radius:0;transition:transform .25s ease}
+.participant-photo-button:hover img{transform:scale(1.08)}
+.participant-photo-button span{position:absolute;left:0;right:0;bottom:0;padding:5px;background:#090820c9;color:#fff;font-size:9px;font-weight:900;letter-spacing:1px}
+.person{padding-left:2px}
+.photo-lightbox{position:fixed;z-index:1000;inset:0;display:grid;place-items:center;padding:22px;background:#050516ed;backdrop-filter:blur(9px);animation:lightbox-in .2s ease both}
+@keyframes lightbox-in{from{opacity:0}to{opacity:1}}
+.photo-lightbox-content{display:grid;justify-items:center;gap:12px;max-width:min(92vw,720px);max-height:88vh;color:#fff;text-align:center}
+.photo-lightbox-content img{display:block;max-width:100%;max-height:76vh;object-fit:contain;border-radius:16px;border:2px solid #c3a8ff;box-shadow:0 15px 60px #000b}
+.photo-lightbox-content strong{font-size:17px}.photo-lightbox-content small{font-size:11px;color:#c7c2e7}
+.photo-lightbox-close{position:absolute;top:18px;right:20px;width:44px;height:44px;border-radius:50%;background:#292052;border:1px solid #9884dc;color:white;font-size:29px;line-height:1}
+@media(max-width:520px){.participant-photo-button{flex-basis:88px;width:88px;height:88px}.participant{gap:11px}.person strong{font-size:13px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
